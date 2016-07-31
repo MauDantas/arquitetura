@@ -2,7 +2,6 @@
 
 //Metodo de retorno da operacao utilizada
 
-
 char* operacao (int instruction){
 	switch(instruction){
 		case 0:
@@ -84,11 +83,41 @@ char* operacao (int instruction){
 
 
 }
+
 //retorna a instrução
 int instrucao(int wholeWorld){
 	int instruction=(wholeWorld & 0xFC000000)>>26;
 	return instruction;
 }
 int main(){
+	//long *linhaComando;
+	//linhaComando = (long *)malloc (sizeof (long));
+	int i =0, j;
+	long Linha[30];
+	int result;
+	FILE *hexa;
+	char b[3],c [3];
+	b[3]="aic";
+	c[3]="nir";
+	char grunge [7];
+	strycat(grunge,b);
+	strycat(grunge, c);
+	printf("%s", grunge);
+	hexa = fopen("1_factorial.hex", "r");
+	if (hexa == NULL)  // Se houve erro na abertura
+	  {
+		 printf("Problemas na abertura do arquivo\n");
+		 return;
+	  }
+	while(!feof(hexa)){
+		fscanf(hexa, "%x", &Linha[i]);  // o 'fgets' lê até 99 caracteres ou até o '\n'
+		i++;
+	}
+	fclose(hexa);
+	printf("Nro de elementos lidos: %d\n", i);
+	j=i;
+	for (i=0; i<j; i++)
+		printf("%x\n", Linha[i]);
+	
 	
 }
