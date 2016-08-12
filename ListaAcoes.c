@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 //Metodo de retorno da operacao utilizada
 
@@ -58,7 +59,7 @@ char* operacao (long instruction){
 		case 25:
 			return "erroE\0";
 		case 26:
-			return "erroE\0";
+			return "bun S\0";
 		case 27:
 			return "beq S\0";
 		case 28:
@@ -94,12 +95,10 @@ int main(){
 	//long *linhaComando;
 	//linhaComando = (long *)malloc (sizeof (long));
 	int i =0, j;
-	long Linha[30];
-	long instruction[30];
+	long Linha[1000];
 	char* coding[30];
 	int result;
 	FILE *hexa;
-	
 	hexa = fopen("1_factorial.hex", "r");
 	if (hexa == NULL)  // Se houve erro na abertura
 	  {
@@ -110,6 +109,8 @@ int main(){
 		fscanf(hexa, "%x", &Linha[i]);  // o 'fgets' lê até 99 caracteres ou até o '\n'
 		i++;
 	}
+	long *instruction;
+	instruction =malloc(i*sizeof(long));
 	fclose(hexa);
 	printf("Nro de elementos lidos: %d\n", i);
 	j=i;
@@ -117,8 +118,33 @@ int main(){
 		printf("%x\n", Linha[i]);
 	for (i=0; i<j; i++){
 		instruction[i]=instrucao(Linha[i]);
-		printf("%x\n", instruction[i]);
-		printf("%s \n", operacao(instruction[i]));
+		//printf("%x\n", instruction[i]);
+		//printf("Linha %d\n", i);
+		//printf("%s \n", operacao(instruction[i]));
+	}
+	char* parse;
+	for (i=0; i<j; i++){
+		parse=operacao(instruction[i]);
+		//printf("%d %c\n", parse[4], parse[4]);
+		if(parse[4] == 85) //U
+				printf("%s \n", parse);
+		else if(parse[4] == 70) //F
+				printf("%s \n", parse);
+		else if(parse[4] == 83) //S
+				printf("%s \n", parse);
+		/*switch (parse[4]){
+			case 85: //U
+				printf("%s \n", parse);
+			case 70: //F
+				printf("%s \n", parse);
+			case 83: //S
+ 				printf("%s \n", parse);
+			default:*/
+		else{	
+				printf("ERRO \n");
+		break;
+		}
+		
 	}
 	
 }
