@@ -1,0 +1,3 @@
+if (self.CavalryLogger) { CavalryLogger.start_js(["a9HaU"]); }
+
+__d('TransformTextToDOMMixin',['flattenArray','isElementNode'],(function a(b,c,d,e,f,g){if(c.__markCompiled)c.__markCompiled();var h=3,i={transform:function(j,k){return c('flattenArray')(j.map(function(l){if(!c('isElementNode')(l)){var m=l,n=[],o=this.MAX_ITEMS||h;while(o--){var p=k?[m].concat(k):[m],q=this.match.apply(this,p);if(!q)break;n.push(m.substring(0,q.startIndex));n.push(q.element);m=m.substring(q.endIndex);}m&&n.push(m);return n;}return l;}.bind(this)));},params:function(){for(var j=arguments.length,k=Array(j),l=0;l<j;l++)k[l]=arguments[l];var m=this;return {__params:true,obj:m,params:k};}};f.exports=i;}),null);

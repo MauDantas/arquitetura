@@ -1,0 +1,4 @@
+if (self.CavalryLogger) { CavalryLogger.start_js(["8fNEP"]); }
+
+__d('HideInlineHelp',['DynamicIconSelector','SelectorDeprecated'],(function a(b,c,d,e,f,g){if(c.__markCompiled)c.__markCompiled();var h=[],i={registerMenu:function(j,k,l){h[j]=k.setValue.bind(k,l);},registerLegacyMenu:function(j,k,l){h[j]=function(){c('SelectorDeprecated').setSelected(k,l);c('DynamicIconSelector').swapIcon(k);};},registerAsyncPopoverMenu:function(j,k,l){h[j]=function(){var m=k.getMenu();m.setValue(l);};},triggerUndo:function(j){h[j]();}};f.exports=i;}),null);
+__d('MakeProfilePicInit',['ProfilePicCropViewerInit','URI'],(function a(b,c,d,e,f,g){if(c.__markCompiled)c.__markCompiled();var h={handleOptimus:function(i,j,k){k.prevent();var l=new (c('URI'))(j.getAttribute('ajaxify')||j.href).getQueryData();c('ProfilePicCropViewerInit').loadID(l.fbid,l.profile_id,{source:l.pp_source,stickerID:l.sticker_id});}};f.exports=h;}),null);

@@ -6,13 +6,13 @@
 #include <math.h>
 
 unsigned long R[36];
+FILE *saida;
 char flag1=0; 
 /* 0-31 Registradores de proposito geral
 	 32 PC - Controle de Fluxo
 	 33 IR - Instrucao atual
 	 34 ER - Registrador de extensao
 	 35 FR - Dados de comparacoes e info do processador*/
-long final=0;
 //todos registradores são zerados
 void cleanR(){
 	char i;
@@ -24,7 +24,6 @@ void cleanR(){
 //R0 sempre zero
 void persistR0(){
 	R[0]=0;}
-
 //Metodo de retorno da operacao utilizada
 char* operacao (long instruction){
 	switch(instruction){
@@ -101,7 +100,9 @@ char* operacao (long instruction){
 		case 35:   
 			return "erroE\0";
 		case 37:   
-			return "callF\0";	
+			return "callF\0";
+		case 38:   
+			return "ret F\0";	
 		case 63:
 			return "int S\0";
 		default: 
@@ -109,77 +110,115 @@ char* operacao (long instruction){
 
 
 }
-
 //retorna a instrução
 long instrucao(unsigned long wholeWord){
 	int instruction=(wholeWord & 0xFC000000)>>26;
 	return instruction;
 }
 //printer de execucao U
-void excU(long instruction, long Rz , long Rx, long Ry){
+void excU(long instruction, long Rz , long Rx, long Ry, long extensao){
 	switch (instruction){
 		//add
 		case 0:
+			Rx=Rx+((extensao&0x00000002)<<4);
+			Ry=Ry+((extensao&0x00000001)<<5);
+			Rz=Rz+((extensao&0x00000004)<<3);
+			fprintf(saida, "add r%d, r%d, r%d \n",Rz,Rx,Ry);
 			printf("add r%d, r%d, r%d \n",Rz,Rx,Ry);
 			printf("[U] FR = 0x%08X, R%d = R%d + R%d = 0x%08X\n", R[35],Rz,Rx,Ry,R[Rz]);
+			fprintf(saida, "[U] FR = 0x%08X, R%d = R%d + R%d = 0x%08X\n", R[35],Rz,Rx,Ry,R[Rz]);
 		break;
 		//sub
 		case 2:
+			Rx=Rx+((extensao&0x00000002)<<4);
+			Ry=Ry+((extensao&0x00000001)<<5);
+			Rz=Rz+((extensao&0x00000004)<<3);
+			fprintf(saida, "sub r%d, r%d, r%d \n",Rz,Rx,Ry);
 			printf("sub r%d, r%d, r%d \n",Rz,Rx,Ry);
+			fprintf(saida, "[U] FR = 0x%08X, R%d = R%d - R%d = 0x%08X\n", R[35],Rz,Rx,Ry,R[Rz]);
 			printf("[U] FR = 0x%08X, R%d = R%d - R%d = 0x%08X\n", R[35],Rz,Rx,Ry,R[Rz]);	
 		break;
 		//mul
 		case 4:
+			Rx=Rx+((extensao&0x00000002)<<4);
+			Ry=Ry+((extensao&0x00000001)<<5);
+			Rz=Rz+((extensao&0x00000004)<<3);
+			fprintf(saida,"mul r%d, r%d, r%d \n",Rz,Rx,Ry );
 			printf("mul r%d, r%d, r%d \n",Rz,Rx,Ry);
+			fprintf(saida, "[U] FR = 0x%08X, ER = 0x%08X, R%d = R%d * R%d = 0x%08X\n", R[35], R[34],Rz,Rx,Ry,R[Rz]);
 			printf("[U] FR = 0x%08X, ER = 0x%08X, R%d = R%d * R%d = 0x%08X\n", R[35], R[34],Rz,Rx,Ry,R[Rz]);
 		break;
 		//div (DUVIDA - SLIDE 5)
 		case 6:
-			printf("sub r%d, r%d, r%d \n",Rz,Rx,Ry);
+			Rx=Rx+((extensao&0x00000002)<<4);
+			Ry=Ry+((extensao&0x00000001)<<5);
+			Rz=Rz+((extensao&0x00000004)<<3);
+			printf("div r%d, r%d, r%d \n",Rz,Rx,Ry);
+			fprintf(saida, "div r%d, r%d, r%d \n",Rz,Rx,Ry);
+			fprintf(saida,"[U] FR = 0x%08X, ER = 0x%08X, R%d = R%d / R%d = 0x%08X\n", R[35],R[34],Rz,Rx,Ry,R[Rz] );
 			printf("[U] FR = 0x%08X, ER = 0x%08X, R%d = R%d / R%d = 0x%08X\n", R[35],R[34],Rz,Rx,Ry,R[Rz]);
 		break;
 		//cmp (DUVIDA - SLIDE 5)
 		case 8:
+			Rx=Rx+((extensao&0x00000002)<<4);
+			Ry=Ry+((extensao&0x00000001)<<5);
+			Rz=Rz+((extensao&0x00000004)<<3);
 			printf("cmp r%d, r%d\n", Rx,Ry);
+			fprintf(saida,"cmp r%d, r%d\n", Rx,Ry);
 			printf("[U] FR = 0x%08X\n",R[35]);
+			fprintf(saida, "[U] FR = 0x%08X\n",R[35]);
 		break;
 		//shl
 		case 10:
 			if(Rz==0){
 				printf("shl r%d, r%d, %d\n", Rz, Rx,(Ry+32));
+				fprintf(saida, "[U] ER = 0x%08X, R%d = R%d << %d = 0x%08X\n",R[34], Rz,Rx,(Ry+33),R[Rz] );
 				printf("[U] ER = 0x%08X, R%d = R%d << %d = 0x%08X\n",R[34], Rz,Rx,(Ry+33),R[Rz] );
+				fprintf(saida,"[U] ER = 0x%08X, R%d = R%d << %d = 0x%08X\n",R[34], Rz,Rx,(Ry+33),R[Rz] );
 			}
 			else{
 				printf("shl r%d, r%d, %d\n", Rz, Rx,Ry);
+				fprintf(saida,"shl r%d, r%d, %d\n", Rz, Rx,Ry );
 				printf("[U] ER = 0x%08X, R%d = R%d << %d = 0x%08X\n",R[34], Rz,Rx,(Ry+1),R[Rz] );
+				fprintf(saida, "[U] ER = 0x%08X, R%d = R%d << %d = 0x%08X\n",R[34], Rz,Rx,(Ry+1),R[Rz] );
 			}
 				
 		break;
 		//shr
 		case 11:
 			printf("shr r%d, r%d, %d\n", Rz,Rx,Ry);
+			fprintf(saida,"shr r%d, r%d, %d\n", Rz,Rx,Ry);
+			fprintf(saida, "[U] ER = 0x%08X, R%d = R%d >> %d = 0x%08X\n",R[34], Rz,Rx,Ry,R[Rz] );
 			printf("[U] ER = 0x%08X, R%d = R%d >> %d = 0x%08X\n",R[34], Rz,Rx,Ry,R[Rz] );
 		break;
 		//and
 		case 12:
 			printf("and r%d, r%d, %d\n",Rz,Rx,Ry);
+			fprintf(saida,"and r%d, r%d, %d\n",Rz,Rx,Ry);
 			printf("[U] R%d = R%d & R%d = 0x%08X\n", Rz,Rx,Ry,R[Rz] );
+			fprintf(saida,"and r%d, r%d, %d\n",Rz,Rx,Ry);
 		break;
 		//not
 		case 14:
 			printf("not r%d, %d\n",Rx,Ry);
+			fprintf(saida,"not r%d, %d\n",Rx,Ry);
 			printf("[U] R%d = ~R%d = 0x%08X\n", Rx,Ry,R[Rx] );
+			fprintf(saida,"[U] R%d = ~R%d = 0x%08X\n", Rx,Ry,R[Rx] );
 		break;
 		//or
 		case 16:
 			printf("or r%d, r%d, %d\n",Rz,Rx,Ry);
+			fprintf(saida,"or r%d, r%d, %d\n",Rz,Rx,Ry);
 			printf("[U] R%d = R%d | R%d = 0x%08X\n", Rz,Rx,Ry,R[Rz] );
+			fprintf(saida,"[U] R%d = R%d | R%d = 0x%08X\n", Rz,Rx,Ry,R[Rz] );
 		break;
 		//xor
 		case 18: 
 			printf("xor r%d, r%d, %d\n",Rz,Rx,Ry);
+			fprintf(saida, "xor r%d, r%d, %d\n",Rz,Rx,Ry);
 			printf("[U] R%d = R%d ^ R%d = 0x%08X\n", Rz,Rx,Ry,R[Rz] );
-		break;		
+			fprintf(saida,"[U] R%d = R%d ^ R%d = 0x%08X\n", Rz,Rx,Ry,R[Rz] );
+		break;
 		}
 }
 //printer de execucao de F
@@ -188,63 +227,102 @@ void excF(long instruction, long IM16 , long Rx, long Ry){
 		//addi
 		case 1:
 			printf("addi r%d, r%d, %d \n",Rx,Ry,IM16);
+			fprintf(saida, "addi r%d, r%d, %d \n",Rx,Ry,IM16);
 			printf("[F] FR = 0x%08X, R%d = R%d + 0x%04X = 0x%08X\n", R[35],Rx,Ry,IM16,R[Rx]);
+			fprintf(saida, "[F] FR = 0x%08X, R%d = R%d + 0x%04X = 0x%08X\n", R[35],Rx,Ry,IM16,R[Rx]);
 		break;
 		//muli
 		case 5:
 			printf("muli r%d, r%d, %d \n",Rx,Ry,IM16);
+			fprintf(saida,"muli r%d, r%d, %d \n",Rx,Ry,IM16);
 			printf("[F] FR = 0x%08X, ER = 0x%08X, R%d = R%d * 0x%04X = 0x%08X\n", R[35], R[34],Rx,Ry,IM16,R[Rx]);
+			fprintf(saida,"[F] FR = 0x%08X, ER = 0x%08X, R%d = R%d * 0x%04X = 0x%08X\n", R[35], R[34],Rx,Ry,IM16,R[Rx]);
 		break;
 		//divi (DUVIDA - SLIDE 5)
 		case 7:
 			printf("divi r%d, r%d, %d \n",Rx,Ry,IM16);
+			fprintf(saida,"divi r%d, r%d, %d \n",Rx,Ry,IM16);
 			printf("[F] FR = 0x%08X, ER = 0x%08X, R%d = R%d / 0x%04X = 0x%08X\n", R[35],R[34],Rx,Ry,IM16,R[Rx]);
+			fprintf(saida,"[F] FR = 0x%08X, ER = 0x%08X, R%d = R%d / 0x%04X = 0x%08X\n", R[35],R[34],Rx,Ry,IM16,R[Rx]);
 		break;
 		//cmpi (DUVIDA - SLIDE 5)
 		case 9:
-			printf("cmpi r%d, 0x%04X\n", Rx,IM16);
+			printf("cmpi r%d, %d\n", Rx,IM16);
+			fprintf(saida,"cmpi r%d, %d\n", Rx,IM16);
 			printf("[F] FR = 0x%08X\n",R[35]);
+			fprintf(saida,"[F] FR = 0x%08X\n",R[35]);
 		break;
 		//andi
 		case 13:
 			printf("andi r%d, r%d, %d\n",Rx,Ry,IM16);
+			fprintf(saida,"andi r%d, r%d, %d\n",Rx,Ry,IM16);
 			printf("[F] R%d = R%d & 0x%04X = 0x%08X\n", Rx,Ry, IM16,R[Rx] );
+			fprintf(saida,"[F] R%d = R%d & 0x%04X = 0x%08X\n", Rx,Ry, IM16,R[Rx] );
 		break;
 		//noti
 		case 15:
 			printf("noti r%d, 0x%X\n",Rx,IM16);
+			fprintf(saida, "noti r%d, 0x%X\n",Rx,IM16);
 			printf("[F] R%d = ~0x%04X = 0x%08X\n", Rx,IM16,R[Rx] );
+			fprintf(saida,"[F] R%d = ~0x%04X = 0x%08X\n", Rx,IM16,R[Rx] );
 		break;
 		//ori
 		case 17:
 			printf("ori r%d, r%d, %d\n",Rx,Ry,IM16);
+			fprintf(saida,"[F] R%d = ~0x%04X = 0x%08X\n", Rx,IM16,R[Rx] );
 			printf("[F] R%d = R%d | 0x%04X = 0x%08X\n", Rx,Ry,IM16,R[Rx] );
+			fprintf(saida, "[F] R%d = R%d | 0x%04X = 0x%08X\n", Rx,Ry,IM16,R[Rx] );
 		break;
 		//xori
 		case 19: 
 			printf("xori r%d, r%d, %d\n",Rx,Ry,IM16);
+			fprintf(saida, "xori r%d, r%d, %d\n",Rx,Ry,IM16);
 			printf("[F] R%d = R%d ^ 0x%08X = 0x%X\n", Rx,Ry,IM16,R[Rx]);
+			fprintf(saida, "[F] R%d = R%d ^ 0x%08X = 0x%X\n", Rx,Ry,IM16,R[Rx]);
 		break;
 		//ldw
 		case 20:
 			printf("ldw r%d, r%d, 0x%04X\n", Rx,Ry,IM16);
+			fprintf(saida,"ldw r%d, r%d, 0x%04X\n", Rx,Ry,IM16);
+			fprintf(saida, "[F] R%d = MEM[(R%d + 0x%04X) << 2] = 0x%08X\n", Rx,Ry,IM16,R[Rx]);
 			printf("[F] R%d = MEM[(R%d + 0x%04X) << 2] = 0x%08X\n", Rx,Ry,IM16,R[Rx]);
 		break;
 		
 		//ldb
 		case 21:
 			printf("ldb r%d, r%d, 0x%04X\n", Rx,Ry,IM16);
-			printf("[F] R%d = MEM[R%d + 0x%04X] = 0x%08X\n", Rx,Ry,IM16,R[Rx]);
+			fprintf(saida, "ldb r%d, r%d, 0x%04X\n", Rx,Ry,IM16);
+			printf("[F] R%d = MEM[R%d + 0x%04X] = 0x%02X\n", Rx,Ry,IM16,R[Rx]);
+			fprintf(saida,"[F] R%d = MEM[R%d + 0x%04X] = 0x%02X\n", Rx,Ry,IM16,R[Rx]);
 		break;
 		//stw
 		case 22:
 			printf("stw r%d, %04X, r%d\n", Rx,IM16,Ry);
+			fprintf(saida, "stw r%d, %04X, r%d\n", Rx,IM16,Ry);
 			printf("[F] MEM[(R%d + 0x%04X) << 2]= R%d = 0x%08X\n", Rx,IM16,Ry,R[Ry]);
+			fprintf(saida,"[F] MEM[(R%d + 0x%04X) << 2]= R%d = 0x%08X\n", Rx,IM16,Ry,R[Ry]);
 		break;
 		//stb
 		case 23:
 			printf("stb r%d, %d, r%d\n", Rx,IM16,Ry);
-			printf("[F] MEM[R%d + 0x%04X]= R%d = 0x%08X\n", Rx,IM16,Ry,R[Ry]);
+			fprintf(saida, "stb r%d, %d, r%d\n", Rx,IM16,Ry);
+			printf("[F] MEM[R%d + 0x%04X]= R%d = 0x%02X\n", Rx,IM16,Ry,(0x000000FF&R[Ry]));
+			fprintf(saida, "[F] MEM[R%d + 0x%04X]= R%d = 0x%02X\n", Rx,IM16,Ry,(0x000000FF&R[Ry]));
+		break;
+		//call
+		case 37:
+			persistR0();
+			printf("call r%d, r%d, 0x%04X\n", Rx,Ry,IM16);
+			fprintf(saida,"call r%d, r%d, 0x%04X\n", Rx,Ry,IM16);
+			printf("[F] R%d = (PC + 4) >> 2 = 0x%08X, PC = (R%d + 0x%04X) << 2 = 0x%08x\n", Rx,R[Rx],Ry,IM16, ((Ry+IM16)<<2));
+			fprintf(saida,"[F] R%d = (PC + 4) >> 2 = 0x%08X, PC = (R%d + 0x%04X) << 2 = 0x%08x\n", Rx,R[Rx],Ry,IM16, ((Ry+IM16)<<2));
+		break;
+		//ret
+		case 38:
+			printf("ret r%d \n", Rx,Ry,IM16);
+			fprintf(saida, "ret r%d \n", Rx,Ry,IM16);
+			printf("[F] PC = Rx << 2 = 0x%08X\n",(R[Rx]<<2));
+			fprintf(saida, "[F] PC = Rx << 2 = 0x%08X\n",(R[Rx]<<2));
 		break;
 		}
 }
@@ -255,72 +333,84 @@ void excS(long instruction, long S){
 	//bun
 	case 26:
 		printf("bun 0x%08X\n", S);
+		fprintf(saida,"bun 0x%08X\n", S);
 		printf("[S] PC = 0x%08X\n", PC);
+		fprintf(saida,"[S] PC = 0x%08X\n", PC);
 	break;
 	//beq
 	case 27:
 		printf("beq 0x%08X\n", S);
+		fprintf(saida, "beq 0x%08X\n", S);
 		printf("[S] PC = 0x%08X\n", PC);
+		fprintf(saida, "[S] PC = 0x%08X\n", PC);
 	break;
 	//blt
 	case 28:
 		printf("blt 0x%X\n", S);
+		fprintf(saida,"blt 0x%X\n", S);
 		printf("[S] PC = 0x%08X\n", PC);
+		fprintf(saida,"[S] PC = 0x%08X\n", PC);
 	break;
 	//bgt
 	case 29:
 		printf("bgt 0x%08X\n", S);
+		fprintf(saida, "bgt 0x%08X\n", S);
 		printf("[S] PC = 0x%08X\n", PC);
+		fprintf(saida, "[S] PC = 0x%08X\n", PC);
 	break;
 	//bne
 	case 30:
 		printf("bne 0x%08X\n", S);
+		fprintf(saida,"bne 0x%08X\n", S);
 		printf("[S] PC = 0x%08X\n", PC);
+		fprintf(saida,"[S] PC = 0x%08X\n", PC);
 	break;
 	//bge
 	case 32:
 		printf("bge 0x%X\n", S);
+		fprintf(saida, "bge 0x%X\n", S);
 		printf("[S] PC = 0x%08X\n", PC);
+		fprintf(saida, "[S] PC = 0x%08X\n", PC);
 	break;
 	//ble
 	case 31:
 		printf("ble 0x%08X\n", S);
+		fprintf(saida,"ble 0x%08X\n", S);
 		printf("[S] PC = 0x%08X\n", PC);
+		fprintf(saida,"[S] PC = 0x%08X\n", PC);
 	break;
 	}
 }
 //Parametros para operacoes tipo U
-long* opU(long wholeWord){
-	char E=(wholeWord&0x00038000)>>15;
-	//printf("E: %d ", E);
-	long Rz=(wholeWord&0x00007C00)>>10;
-	//printf("Rz: %d ", Rz);
+long opXU(long wholeWord){
 	long Rx=(wholeWord&0x000003E0)>>05;
-	//printf("Rx: %d ", Rx);
-	long Ry=(wholeWord&0x0000001F);
-	//printf("Ry: %d \n", Ry);
-	long U[4];
-	U[0]=E;
-	U[1]=Rz;
-	U[2]=Rx;
-	U[3]=Ry;
-	persistR0();
-	return U;
+	return Rx;
 }
+long opZU(long wholeWord){
+	long Rz=(wholeWord&0x00007C00)>>10;
+	return Rz;
+}
+long opYU(long wholeWord){
+	long Ry=(wholeWord&0x0000001F);
+	return Ry;
+}
+long opEU(long wholeWord){
+	long E=(wholeWord&0x00038000)>>15;
+	return E;
+} 
 //Parametros para operacoes tipo F
-long* opF(long wholeWord){
-	long IM16=(wholeWord&0x03FFFC00)>>10;
-	//printf("IM16: %d ", IM16);
+long opxF(long wholeWord){
 	long Rx=  (wholeWord&0x000003E0)>>05;
-	//printf("Rx: %d ", Rx);
-	long Ry=  (wholeWord&0x0000001F);
-	//printf("Ry: %d \n", Ry);
-	long F[3];
-	F[0]=IM16;
-	F[1]=Rx;
-	F[2]=Ry;
 	persistR0();
-	return F;
+	return Rx;
+}
+long opyF(long wholeWord){
+	long Ry=  (wholeWord&0x0000001F);
+	return Ry;
+}
+long opIM16F(long wholeWord){
+	long IM16=(wholeWord&0x03FFFC00)>>10;
+	return IM16;
 }
 //Parametros para operacoes tipo S
 long opS(long wholeWord){
@@ -329,9 +419,8 @@ long opS(long wholeWord){
 	persistR0();
 	return IM16;
 }
-
 //modificacoes feitas por instrucoes tipo U
-void RspU(unsigned long instruction, unsigned long Rz, unsigned long Rx, unsigned long Ry){
+void RspU(unsigned long instruction, unsigned long Rz, unsigned long Rx, unsigned long Ry, long extensao){
 	unsigned long aux1, aux2;
 	unsigned long aux3;
 	long aux4;
@@ -339,6 +428,10 @@ void RspU(unsigned long instruction, unsigned long Rz, unsigned long Rx, unsigne
 	switch (instruction){
 		//add
 		case 0:
+			Rx=Rx+((extensao&0x00000002)<<4);
+			Ry=Ry+((extensao&0x00000001)<<5);
+			Rz=Rz+((extensao&0x00000004)<<3);
+			//printf("Rx R%d Ry R%d Rz R%d\n", Rx, Ry, Rz);
 			aux1=R[Rx];
 			aux2=R[Ry];
 			R[Rz]=R[Rx]+R[Ry];
@@ -353,10 +446,14 @@ void RspU(unsigned long instruction, unsigned long Rz, unsigned long Rx, unsigne
 		break;
 		//sub
 		case 2:
+			Rx=Rx+((extensao&0x00000002)<<4);
+			Ry=Ry+((extensao&0x00000001)<<5);
+			Rz=Rz+((extensao&0x00000004)<<3);
+			//printf("Rx R%d Ry R%d Rz R%d\n", Rx, Ry, Rz);
 			aux1=R[Rx];
 			aux2=R[Ry];
 			R[Rz]=R[Rx]-R[Ry];
-			if((R[Rx]-R[Ry])<0x80000000)
+			if((R[Rx]-R[Ry])>ULONG_MAX)
 			{
 				if(R[35]<0x10)
 					R[35]=R[35]+0x00000010;
@@ -364,20 +461,44 @@ void RspU(unsigned long instruction, unsigned long Rz, unsigned long Rx, unsigne
 		break;
 		//mul
 		case 4:
+				Rx=Rx+((extensao&0x00000002)<<4);
+				Ry=Ry+((extensao&0x00000001)<<5);
+				Rz=Rz+((extensao&0x00000004)<<3);
+				//printf("Rz R%d Rx R%d Ry R%d\n", Rz, Rx, Ry);
 				R[34]=0;
-				R[Rz]=R[Rx]*R[Ry];		
-				if((R[Ry] > (ULONG_MAX / R[Rx]))||(R[Rx] > (ULONG_MAX / R[Ry]))){
+				R[Rz]=R[Rx]*R[Ry];
+				//printf("%d\n",R[Rz]);
+				/*if(R[Rz]=!0){
+				if(R[Rx]!=0)
+				aux1=0xFFFFFFFF / R[Rx];
+				else 
+				aux1=0xFFFFFFFF;
+				if(R[Rx]!=0)
+				aux2=0xFFFFFFFF / R[Ry];
+				else
+				aux2=0xFFFFFFFF;	
+				if(R[Ry] > aux1){
+					printf("Resultado %d\n",R[Rz]);
+					if(R[35]<0x10)
+						R[35]=R[35]+0x00000010;	
+				}
+				else if(R[Rx] > aux2)
+					{
 					if(R[35]<0x10)
 						R[35]=R[35]+0x00000010;	
 				}
 				else{
 					R[35]=R[35]&0xFFFFFFEF;
-				}
+				}}*/
 				flag1=Rz;
 		break;
 		//div (DUVIDA - SLIDE 5)
 		case 6:
-			if(Ry==0)
+			Rx=Rx+((extensao&0x00000002)<<4);
+			Ry=Ry+((extensao&0x00000001)<<5);
+			Rz=Rz+((extensao&0x00000004)<<3);
+			//printf("R[y]%d\n",R[Ry]);
+			if(R[Ry]==0)
 			{
 				R[35]=R[35]+0x00000008;
 			}
@@ -395,6 +516,9 @@ void RspU(unsigned long instruction, unsigned long Rz, unsigned long Rx, unsigne
 		break;
 		//cmp (DUVIDA - SLIDE 5)
 		case 8:
+			Rx=Rx+((extensao&0x00000002)<<4);
+			Ry=Ry+((extensao&0x00000001)<<5);
+			Rz=Rz+((extensao&0x00000004)<<3);
 			if(R[Rx]>R[Ry]){
 				R[35]=(R[35]&0xFFFFFFF8)+0x00000004;
 			}
@@ -407,6 +531,9 @@ void RspU(unsigned long instruction, unsigned long Rz, unsigned long Rx, unsigne
 		break;
 		//shl
 		case 10:
+			Rx=Rx+((extensao&0x00000002)<<4);
+			Ry=Ry+((extensao&0x00000001)<<5);
+			Rz=Rz+((extensao&0x00000004)<<3);
 			//printf("The flag is %d ",flag1);
 			if(Rz==0){
 				R[34]=R[Rx]<<(Ry+1);
@@ -429,6 +556,7 @@ void RspU(unsigned long instruction, unsigned long Rz, unsigned long Rx, unsigne
 		case 11:
 			if(Rz==0){
 				R[34]=0;
+				R[Rz]=0;
 			}
 			else if(flag1 == Rx){
 				R[Rz]=R[Rx]>>(Ry+1);
@@ -438,8 +566,8 @@ void RspU(unsigned long instruction, unsigned long Rz, unsigned long Rx, unsigne
 				//printf ("Er=%X Rz=%X \n", R[34], R[Rz]);
 			}
 			else{
-				R[34]=R[Rx]>>(32-(Ry+1));
-				R[Rz]=R[Rx]<<(Ry+1);
+				R[34]=0;
+				R[Rz]=R[Rx]>>(Ry+1);
 				//printf ("Er=%X Rz=%X \n", R[34], R[Rz]);
 				flag1=Rz;
 			}
@@ -466,13 +594,15 @@ void RspU(unsigned long instruction, unsigned long Rz, unsigned long Rx, unsigne
 //modificacoes feitas por instrucoes tipo F
 void RspF(unsigned long instruction, unsigned long IM16, unsigned long Rx, unsigned long Ry){
 	unsigned long aux1, aux2;
-	int aux3, aux4, aux5;
+	unsigned long aux3, aux4, aux5;
 	switch (instruction){
 		//addi
 		case 1:
+			//printf("R[y] %d\n",R[Ry] );
 			aux1=R[Ry];
 			aux2=IM16;
 			R[Rx]=IM16+R[Ry];
+			//printf("Resp %X\n",R[Rx]);
 			//printf("%d+%d=%d\n", aux1, IM16,R[Rx]);
 			if(R[Ry]>R[Rx])
 			{
@@ -555,6 +685,7 @@ void RspF(unsigned long instruction, unsigned long IM16, unsigned long Rx, unsig
 			R[Rx]=IM16^R[Ry];
 		break;
 		}
+		
 	persistR0();
 }
 //modificacoes feitas por instrucoes tipo S
@@ -625,7 +756,13 @@ int main(){
 	int i =0, j;
 	unsigned long wholeWord[1000];
 	FILE *hexa;
-	hexa = fopen("1_factorial.hex", "r");
+	char destino[]="poxim1\0";
+	char path[20];
+	strcpy(path,destino);
+	strcat(destino, ".input");
+	strcat(path,".output");
+	//printf("%s", destino);
+	hexa = fopen(destino, "r");
 	if (hexa == NULL)  // Se houve erro na abertura
 	  {
 		 printf("Problemas na abertura do arquivo\n");
@@ -636,133 +773,133 @@ int main(){
 		i++;
 	}
 	unsigned long *instruction;
+	//printf("j %d\n", i);
 	instruction =malloc(i*sizeof(long));
 	j=i;
-	final=j;
 	for (i=0; i<j; i++){
 		instruction[i]=instrucao(wholeWord[i]);
 		//printf ("here %08X\n", wholeWord[i]);
 	}
 	char* parse;
-	unsigned long* U;
-	unsigned long* F;
+	unsigned long E, Rz,Rx,Ry,IM16;
 	unsigned long S;
 	unsigned long instruc;
+	unsigned long aux, b, aux1;
 	i=0;
+	saida=fopen(path, "w");
 	printf("[START OF SIMULATION]\n");
+	fprintf(saida, "[START OF SIMULATION]\n");
 	while(1){
+		//printf("0x%08X\n", wholeWord[R[32]]);
 		parse=operacao(instruction[R[32]]);
+		R[33]=wholeWord[R[32]];
 		//printf ("here %08X\n", wholeWord[R[32]]);
 		if(wholeWord[R[32]]==0){
 			printf ("here \n");
 			R[32]++;
 			}
 		else if(parse[4] == 85){ //U U0=E U1=Rz	U2=Rx U3=Ry;
-				U=opU(wholeWord[R[32]]);
-				//printf("Rz R%d Rx R%d Ry R%d\n", U[1], U[2], U[3]);
-				RspU(instruction[R[32]], U[1], U[2], U[3]);
+				//printf("0x%08X instruc %s\n", wholeWord[R[32]], parse);
+				Rx=opXU(wholeWord[R[32]]);
+				Ry=opYU(wholeWord[R[32]]);
+				Rz=opZU(wholeWord[R[32]]);
+				E=opEU(wholeWord[R[32]]);
+				//printf("passei \n");
+				//printf("Rz R%d Rx R%d Ry R%d\n", Rz, Rx, Ry);
+				RspU(instruction[R[32]], Rz, Rx, Ry,E);
 				//printf("Rz R%d Rx R%d Ry R%d\n",U[1], U[2], U[3]);
-				excU(instruction[R[32]], U[1] ,U[2], U[3]);
+				excU(instruction[R[32]], Rz ,Rx, Ry,E);
 				R[32]++;
 				persistR0();
+				//printf("passei \n");
 		}
 		else if(parse[4] == 70){ //F f0=IM16 F1=Rx F2=Ry
-				F=opF(wholeWord[R[32]]);
-				RspF(instruction[R[32]], F[0], F[1], F[2]);
+				IM16=opIM16F(wholeWord[R[32]]);
+				Rx=opxF(wholeWord[R[32]]);
+				Ry=opyF(wholeWord[R[32]]);
+				aux=Ry+0;
+				int something=24-(8*IM16);
+				RspF(instruction[R[32]], IM16, Rx, Ry);
 				if(instruction[R[32]]==22)//stw
 				{
-					wholeWord[F[1]+F[0]]=R[F[2]];
+					wholeWord[Rx+IM16]=R[Ry];
 				}
 				else if(instruction[R[32]]==23)//stb
 				{
-					switch(F[0]%8){
-						case 0:
-							wholeWord[F[1]]=(R[F[1]]&0xFFFFFFF0)+(R[F[2]]&0x0000000F);
-						break;
-						case 1:
-							wholeWord[F[1]]=(R[F[1]]&0xFFFFFF0F)+(R[F[2]]&0x000000F0);
+					//printf("0x%08X\n",R[Ry]);
+					switch(IM16){
+						case 3:
+							wholeWord[Rx]=(R[Ry]&0x000000FF)+(wholeWord[Rx]&0xFFFFFF00);
+							//printf("0x%08X\n",wholeWord[Rx]);
 						break;
 						case 2:
-							wholeWord[F[1]]=(R[F[1]]&0xFFFFF0FF)+(R[F[2]]&0x00000F00);
+							wholeWord[Rx]=((R[Ry]&0x000000FF)<<8)+(wholeWord[Rx]&0xFFFF00FF);
+							//printf("0x%08X\n",wholeWord[Rx]);
 						break;
-						case 3:
-							wholeWord[F[1]]=(R[F[1]]&0xFFFF0FFF)+(R[F[2]]&0x0000F000);
+						case 1:
+							wholeWord[Rx]=((R[Ry]&0x000000FF)<<16)+(wholeWord[Rx]&0xFF00FFFF);
+							//printf("0x%08X\n",wholeWord[Rx]);
 						break;
-						case 4:
-							wholeWord[F[1]]=(R[F[1]]&0xFFF0FFFF)+(R[F[2]]&0x000F0000);
-						break;
-						case 5:
-							wholeWord[F[1]]=(R[F[1]]&0xFF0FFFFF)+(R[F[2]]&0x00F00000);
-						break;
-						case 6:
-							wholeWord[F[1]]=(R[F[1]]&0xF0FFFFFF)+(R[F[2]]&0x0F000000);
-						break;
-						case 7:
-							wholeWord[F[1]]=(R[F[1]]&0x0FFFFFFF)+(R[F[2]]&0xF0000000);
+						case 0:
+							wholeWord[Rx]=((R[Ry]&0x000000FF)<<24)+(wholeWord[Rx]&0x00FFFFFFF);
+							//printf("0x%08X\n",wholeWord[Rx]);
 						break;
 					}
 				}
 				//ldw
 				else if (instruction[R[32]]==20){
-					R[F[1]]=wholeWord[F[2]+F[0]];
+					R[Rx]=wholeWord[R[Ry]+IM16];
 				}	
 				//ldb 
 				else if (instruction[R[32]]==21){
-					long a=1;
-					i=1;
-					long bc =2;
-					if(F[2]==0){
-						a==1;	
-					}
-					else{
-						int b= F[2]+0;
-						while(i<=b){
-							if(a==1)
-								a=2;
-							a=a*bc;
-							i++;
-						}
-					}
-					bc=0+F[0];
-					R[F[1]]=bc+a+1;
-					/*switch(F[0]){
-						case 0:
-							R[F[1]]=wholeWord[F[2]]&0x0000000F;
-						break;
-						case 1:
-							R[F[1]]=(wholeWord[F[2]]&0x000000F0)>>4;
-						break;
-						case 2:
-							R[F[1]]=(wholeWord[F[2]]&0x00000F00)>>8;
-						break;
-						case 3:
-							R[F[1]]=(wholeWord[F[2]]&0x0000F000)>>12;
-						break;
-						case 4:
-							R[F[1]]=(wholeWord[F[2]]&0x000F0000)>>16;
-						break;
-						case 5:
-							R[F[1]]=(wholeWord[F[2]]&0x00F00000)>>20;
-						break;
-						case 6:
-							R[F[1]]=(wholeWord[F[2]]&0x0F000000)>>24;
-						break;
-						case 7:
-							R[F[1]]=(wholeWord[F[2]]&0xF0000000)>>28;
-						break;
-						}*/
+					//printf("b %d\n", IM16);
+					//printf("b %d\n", something);
+					int a=0;
+					aux=R[aux];
+					//printf("");
+					aux=aux/4;
+					aux=wholeWord[aux];
+					//printf("aux 0x%08X\n",aux );
+					a=aux>>something;
+					a=a&0x000000FF;
+					R[Rx]=a;
 				}
-				excF(instruction[R[32]], F[0] , F[1], F[2]);
-				R[32]++;
+				//call
+				else if (instruction[R[32]]==37){
+					//printf("IM16 0x%04X\n", IM16);
+					R[Rx]=R[32]+1;
+					aux1=Ry+IM16;
+				}
+				//ret
+				else if(instruction[R[32]]==38){
+					aux1=R[Rx];
+				}
+				excF(instruction[R[32]], IM16 , Rx, Ry);
+				if(instruction[R[32]]==37){
+					R[32]=aux1;
+					//printf("PC %d \n", R[32]);
+					//printf("0x%08X\n", wholeWord[R[32]]);
+				}
+				else if(instruction[R[32]]==38){
+					R[32]=aux1;
+					//printf("PC %d \n", R[32]);
+					//printf("0x%08X\n", wholeWord[R[32]]);
+				}
+				else{
+					R[32]++;
+				}
+				
 		}
 		else if(parse[4] == 83){ //S
 				instruc=instruction[R[32]];
 				if(instruction[R[32]]==63)
 					{
+						fprintf(saida, "int 0 \n[S] CR = 0x00000000, PC = 0x00000000\n");
 						printf("int 0 \n[S] CR = 0x00000000, PC = 0x00000000\n");
+						fprintf(saida,"[END OF SIMULATION]\n");
 						printf("[END OF SIMULATION]\n");
 						break;
-						
+						fclose(saida);
 					}
 				else{	
 					S=opS(wholeWord[R[32]]);
@@ -776,4 +913,5 @@ int main(){
 		}
 	}
 	fclose(hexa);
+	return 0;
 }
