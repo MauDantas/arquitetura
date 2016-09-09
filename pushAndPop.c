@@ -21,7 +21,7 @@ void cleanR(){
 		R[i]=0;
 	}
 	for(i=0; i<100; i++){
-		plha[i]=0;
+		pilha[i]=0;
 	}
 }
 
@@ -38,7 +38,7 @@ char* operacao (long instruction){
 		case 2:
 			return "sub U\0";
 		case 3:
-			return "subiU\0";
+			return "subiF\0";
 		case 4:
 			return "mul U\0";
 		case 5:
@@ -82,7 +82,7 @@ char* operacao (long instruction){
 		case 24:
 			return "pushU\0";
 		case 25:
-			return "pop E\0";
+			return "pop U\0";
 		case 26:
 			return "bun S\0";
 		case 27:
@@ -221,9 +221,19 @@ void excU(long instruction, long Rz , long Rx, long Ry, long extensao){
 			printf("[U] R%d = R%d ^ R%d = 0x%08X\n", Rz,Rx,Ry,R[Rz] );
 			fprintf(saida,"[U] R%d = R%d ^ R%d = 0x%08X\n", Rz,Rx,Ry,R[Rz] );
 		break;
+		//push
 		case 24:
+			printf("push r%d, r%d\n", Rx, Ry);
+			fprintf(saida, "push r%d, r%d\n", Rx, Ry);
+			printf("[U] MEM[R%d--] = R%d = 0x%08X\n",Rx, Ry,R[Ry]);
+			fprintf(saida, "[U] MEM[R%d--] = R%d = 0x%08X\n",Rx, Ry,R[Ry]);
 		break;
+		//pop
 		case 25:
+			printf("pop r%d, r%d\n", Rx, Ry);
+			fprintf(saida,"pop r%d, r%d\n", Rx, Ry);
+			printf("[U] R%d = MEM[++R%d] = 0x%08X\n", Rx, Ry,R[Rx]);
+			fprintf(saida, "[U] R%d = MEM[++R%d] = 0x%08X\n", Rx, Ry,R[Rx]);
 		break;
 		}
 }
@@ -236,6 +246,13 @@ void excF(long instruction, long IM16 , long Rx, long Ry){
 			fprintf(saida, "addi r%d, r%d, %d \n",Rx,Ry,IM16);
 			printf("[F] FR = 0x%08X, R%d = R%d + 0x%04X = 0x%08X\n", R[35],Rx,Ry,IM16,R[Rx]);
 			fprintf(saida, "[F] FR = 0x%08X, R%d = R%d + 0x%04X = 0x%08X\n", R[35],Rx,Ry,IM16,R[Rx]);
+		break;
+		//subi
+		case 3:
+			fprintf(saida, "subi r%d, r%d, %d \n",Rx,Ry,IM16);
+			printf("subi r%d, r%d, %d \n",Rx,Ry,IM16);
+			fprintf(saida, "[U] FR = 0x%08X, R%d = R%d - 0x%04X = 0x%08X\n", R[35],Rx,Ry,IM16,R[Rx]);
+			printf("[F] FR = 0x%08X, R%d = R%d - 0x%04X = 0x%08X\n", R[35],Rx,Ry,IM16,R[Rx]);	
 		break;
 		//muli
 		case 5:
@@ -594,18 +611,19 @@ void RspU(unsigned long instruction, unsigned long Rz, unsigned long Rx, unsigne
 		case 18: 
 			R[Rz]=R[Rx]^R[Ry];
 		break;
+		//push
 		case 24:
-			aux5=0;
-			while(pilha[aux5]!=0){
-				aux5=aux5+1
-			}
-			for (aux5; aux5>0; i--)
-			{
-				pilha[aux5+1]=pilha[aux5];
-				
-			}
+			pilha[R[Rx]]=R[Ry];
+			R[Rx]=R[Rx]-1;
 		break;
+		//pop
 		case 25:
+			/* for(aux5=0;aux5<100;aux5++)
+				printf("Elemento %d %08x\n", aux5, pilha[aux5]);  */
+			R[Ry]=R[Ry]+1;
+			//printf("R%d = %d Pilha[%d] = %d\n", Ry, R[Ry], R[Ry], pilha[R[Ry]] );
+			R[Rx]=pilha[R[Ry]];
+			//printf("Rx = 0x%08X\n", R[Rx]);
 		break;	
 		}
 }
@@ -635,14 +653,15 @@ void RspF(unsigned long instruction, unsigned long IM16, unsigned long Rx, unsig
 		break;
 		//subi
 		case 3:
+			//printf("HELLO\n");
 			aux1=IM16;
 			aux2=R[Ry];
 			R[Rx]=R[Ry]-IM16;
-			if((R[Ry]-IM16)<0x80000000)
+			/*if((R[Ry]-IM16)<0x80000000)
 			{
 				if(R[35]<0x10)
 					R[35]=R[35]+0x00000010;
-			}
+			}*/
 		break;
 		//muli
 		case 5:
@@ -775,12 +794,13 @@ int main(){
 	int i =0, j;
 	unsigned long wholeWord[1000];
 	FILE *hexa;
-	char destino[]="poxim1\0";
-	char path[20];
+	char destino[40]="1_recursive_factorial\0";
+	char path[40];
+	printf("\n%s\n", destino);
 	strcpy(path,destino);
-	strcat(destino, ".input");
-	strcat(path,".output");
-	//printf("%s", destino);
+	strcat(destino, ".hex");
+	//strcat(path,".out");
+	printf("\n%s\n", destino);
 	hexa = fopen(destino, "r");
 	if (hexa == NULL)  // Se houve erro na abertura
 	  {
@@ -797,7 +817,7 @@ int main(){
 	j=i;
 	for (i=0; i<j; i++){
 		instruction[i]=instrucao(wholeWord[i]);
-		//printf ("here %08X\n", wholeWord[i]);
+		//printf ("%08X\n", wholeWord[i]);
 	}
 	char* parse;
 	unsigned long E, Rz,Rx,Ry,IM16;
@@ -813,6 +833,8 @@ int main(){
 		parse=operacao(instruction[R[32]]);
 		R[33]=wholeWord[R[32]];
 		//printf ("here %08X\n", wholeWord[R[32]]);
+		//printf("PC = %d\n", R[32]);
+		//printf("OP = %d \n",instruction[R[32]]);
 		if(wholeWord[R[32]]==0){
 			printf ("here \n");
 			R[32]++;
@@ -830,7 +852,6 @@ int main(){
 				excU(instruction[R[32]], Rz ,Rx, Ry,E);
 				R[32]++;
 				persistR0();
-				//printf("passei \n");
 		}
 		else if(parse[4] == 70){ //F f0=IM16 F1=Rx F2=Ry
 				IM16=opIM16F(wholeWord[R[32]]);
