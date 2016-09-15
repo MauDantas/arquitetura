@@ -7,6 +7,10 @@
 
 unsigned long pilha[100];
 unsigned long R[64];
+unsigned long x, y;
+float z;
+unsigned long controlFpu;
+
 FILE *saida;
 char flag1=0; 
 /* 0-31 Registradores de proposito geral
@@ -27,6 +31,58 @@ void cleanR(){
 	}
 }
 
+//Simulador FPU (float process unit)
+void fpu(){
+	int xint;
+	switch((controlFpu&0x0000001F)){
+		case 0:
+			break;
+		case 1:
+			z=(x+y);
+			break;
+		case 2:
+			z= (x-y);
+			break;
+		case 3:
+			z= x*y;
+			break;
+		case 4:
+			if(x==0 && y==0){
+				z=0;
+				controlFpu=0x00000020|controlFpu;
+			}
+			else{
+				z=x/y;
+			}
+			break;
+		case 5:
+			z = x;
+			break;
+		case 6:
+			z= y;
+			break;
+		case 7:
+			xint=z;
+			z=xint;
+			break;
+		case 8: 
+			xint=z;
+			z=xint+1;
+			break;
+		case 9:
+			xint=z;
+			if((z-xint)>=0.5){
+				z=xint +1;
+			}
+			else{
+				z=xint;
+			}
+			break;
+		default: 
+			controlFpu=controlFpu|0x00000020;
+			break;
+		}
+} 
 //R0 sempre zero
 void persistR0(){
 	R[0]=0;}
@@ -257,7 +313,7 @@ void excF(long instruction, long IM16 , long Rx, long Ry){
 		//addi
 		case 1:
 			printf("addi r%d, r%d, %d \n",Rx,Ry,IM16);
-			fprintf(saida, "addi r%d, r%d, %d \n",Rx,Ry,IM16);
+			fprintf(saida, "addi r%d, r%d, %d\n",Rx,Ry,IM16);
 			printf("[F] FR = 0x%08X, R%d = R%d + 0x%04X = 0x%08X\n", R[35],Rx,Ry,IM16,R[Rx]);
 			fprintf(saida, "[F] FR = 0x%08X, R%d = R%d + 0x%04X = 0x%08X\n", R[35],Rx,Ry,IM16,R[Rx]);
 		break;
@@ -337,7 +393,7 @@ void excF(long instruction, long IM16 , long Rx, long Ry){
 			printf("stw r%d, 0x%04X, r%d\n", Rx,IM16,Ry);
 			fprintf(saida, "stw r%d, 0x%04X, r%d\n", Rx,IM16,Ry);
 			printf("[F] MEM[(R%d + 0x%04X) << 2]= R%d = 0x%08X\n", Rx,IM16,Ry,R[Ry]);
-			fprintf(saida,"[F] MEM[(R%d + 0x%04X) << 2]= R%d = 0x%08X\n", Rx,IM16,Ry,R[Ry]);
+			fprintf(saida,"[F] MEM[(R%d + 0x%04X) << 2] = R%d = 0x%08X\n", Rx,IM16,Ry,R[Ry]);
 		break;
 		//stb
 		case 23:
@@ -357,7 +413,7 @@ void excF(long instruction, long IM16 , long Rx, long Ry){
 		//ret
 		case 38:
 			printf("ret r%d \n", Rx);
-			fprintf(saida, "ret r%d \n", Rx);
+			fprintf(saida, "ret r%d\n", Rx);
 			printf("[F] PC = Rx << 2 = 0x%08X\n",(R[Rx]<<2));
 			fprintf(saida, "[F] PC = R%d << 2 = 0x%08X\n",Rx, (R[Rx]<<2));
 		break;
@@ -369,12 +425,12 @@ void excF(long instruction, long IM16 , long Rx, long Ry){
 			fprintf(saida,"[F] R%d = IPC >> 2 = 0x%08X, R%d = CR = 0x%08X, PC = 0x%08X\n", Rx,R[37],Ry,R[36], (IM16)<<2);
  */		break;
 		//reti
-		case 40:
-			printf("reti r%d \n", Rx);
+		/*case 40:
+			 printf("reti r%d \n", Rx);
 			fprintf(saida, "reti r%d \n", Rx);
 			printf("[F] PC = Rx << 2 = 0x%08X\n",(R[Rx]<<2));
 			fprintf(saida, "[F] PC = Rx << 2 = 0x%08X\n",(R[Rx]<<2));	
-		}
+		 */}
 }
 //printer de execucao de S
 void excS(long instruction, long S){
@@ -801,6 +857,10 @@ void RspF(unsigned long instruction, unsigned long IM16, unsigned long Rx, unsig
 		break;
 		//reti
 		case 40:
+			printf("reti r%d\n", Rx);
+			printf("[F] PC = R%d << 2 = 0x%08X\n",Rx, R[Rx]<<2);
+			fprintf(saida,"reti r%d\n", Rx);
+			fprintf(saida,"[F] PC = R%d << 2 = 0x%08X\n",Rx, R[Rx]<<2);
 			R[32]=R[Rx];
 		break;
 	}
@@ -910,7 +970,7 @@ int main(){
 	int i =0, j;
 	unsigned long wholeWord[1000];
 	FILE *hexa;
-	char destino[40]="2_watchdog\0";
+	char destino[40]="2_fpu\0";
 	char path[40];
 	printf("\n%s\n", destino);
 	strcpy(path,destino);
@@ -938,10 +998,16 @@ int main(){
 	char* parse;
 	unsigned long E, Rz,Rx,Ry,IM16;
 	unsigned long S;
-	unsigned long instruc, watchdog;
+	unsigned long decounter, instruc, watchdog;
 	watchdog=0;
-	unsigned long aux, b, aux1, control;
+	unsigned long aux, b, aux1, trig, Sfpu;
 	i=0;
+	trig =0;
+	decounter =0;
+	controlFpu=0;
+	x=0;
+	y=0;
+	z=0;
 	saida=fopen(path, "w");
 	printf("[START OF SIMULATION]\n");
 	fprintf(saida, "[START OF SIMULATION]\n");
@@ -977,16 +1043,38 @@ int main(){
 				aux=Ry+0;
 				int something=24-(8*IM16);
 				RspF(instruction[R[32]], IM16, Rx, Ry);
-				if(instruction[R[32]]==22)//stw
+				//stw
+				if(instruction[R[32]]==22)
 				{
+					//printf("R[Rx]+IM16 = 0x%08X\n", R[Rx]+IM16);
+
 					if((R[Rx]+IM16)==0x2020){
 						watchdog=R[Ry];
 					}
+					else if((R[Rx]+IM16)==0x2203){
+						controlFpu=R[Ry];
+						printf("\n\nR[Ry] = 0x%08X\n\n\n", R[Ry]);
+						printf("\n\nControl = 0x%08X\n\n\n", controlFpu);
+					}
+					else if((R[Rx]+IM16)==0x2202){
+						z=R[Ry];
+					}
+					else if((R[Rx]+IM16)==0x2201){
+						y=R[Ry];
+						printf("\n\nR[Ry] = 0x%08X\n\n\n", R[Ry]);
+						printf("\n\nY = 0x%08X\n\n\n", y);
+					}
+					else if((R[Rx]+IM16)==0x2200){
+						x=R[Ry];
+						printf("\n\nR[Ry] = 0x%08X\n\n\n", R[Ry]);
+						printf("\n\nX = 0x%08X\n\n\n", x);
+					}
 					else{
-						wholeWord[Rx+IM16]=R[Ry];
+						wholeWord[R[Rx]+IM16]=R[Ry];
 					}
 				}
-				else if(instruction[R[32]]==23)//stb
+				//stb
+				else if(instruction[R[32]]==23)
 				{
 					//printf("0x%08X\n",R[Ry]);
 					switch(IM16){
@@ -1010,7 +1098,31 @@ int main(){
 				}
 				//ldw
 				else if (instruction[R[32]]==20){
-					R[Rx]=wholeWord[R[Ry]+IM16];
+					//printf("R[Ry]+IM16 = 0x%08X\n", R[Ry]+IM16);
+					if((R[Ry]+IM16)==0x2020){
+						R[Rx]=watchdog;
+						}
+					else if((R[Ry]+IM16)==0x2203){
+						R[Rx]=controlFpu;
+						//printf("Control fpu = 0x%08X\n", controlFpu);
+					}
+					else if((R[Ry]+IM16)==0x2202){
+						R[Rx]=z;
+						//printf("Z = 0x%08X\n", z);
+					}
+					else if((R[Ry]+IM16)==0x2201){
+						R[Rx]=y;
+						printf("\n\nY = 0x%08X\n\n\n", y);
+					}
+					else if((R[Ry]+IM16)==0x2200){
+						R[Rx]=x;
+						//printf("X = 0x%08X\n", x);
+					}
+					else{
+						R[Rx]=wholeWord[R[Ry]+IM16];
+						//printf("R%d = 0x%08X\n", Rx, R[Rx]);
+					
+					}
 				}	
 				//ldb 
 				else if (instruction[R[32]]==21){
@@ -1085,20 +1197,13 @@ int main(){
 		}
 		//Condicional de interrupcao
 		if((R[35]&0x00000040)==0x40){
-			//printf("ATIVADO watchdog=0x%08X\n",watchdog);
-			//watchdog
-			if((watchdog&0x80000000)==0x80000000){
-				if((watchdog&0x7FFFFFFF)==0){
-					printf("[HARDWARE INTERRUPTION 1]\n");
-					fprintf(saida,"[HARDWARE INTERRUPTION 1]\n");
-					R[36]=0xE1AC04DA;
-					watchdog=0;
-					R[32]=1;
-					//printf("0x%08X\n",wholeWord[R[32]]);
-				}
-				else{
-					watchdog--;
-				}
+			//Instrucao invalida
+			if(((R[35]&0x00000020)==0x20)&&(R[36]!=(R[37]-1))){
+				R[37]=R[32]+1;
+				R[36]=R[32];
+				R[32]=3;
+				printf("[INVALID INSTRUCTION @ 0x%08X]\n", R[36]<<2);
+				fprintf(saida, "[INVALID INSTRUCTION @ 0x%08X]\n", R[37]<<2);
 			}
 			//Divisao por zero
 			else if(((R[35]&0x00000008)==0x8)&&(R[36]!=1)){
@@ -1106,18 +1211,44 @@ int main(){
 				R[32]=3;
 				R[36]=1;
 			}
-			//Instrucao invalida
-			else if(((R[35]&0x00000020)==0x20)&&(R[36]!=(R[37]-1))){
-				R[37]=R[32]+1;
-				R[36]=R[32];
-				R[32]=3;
-				printf("[INVALID INSTRUCTION @ 0x%08X]\n", R[36]<<2);
-				fprintf(saida, "[INVALID INSTRUCTION @ 0x%08X]\n", R[37]<<2);
+			//watchdog
+			else if((watchdog&0x80000000)==0x80000000){
+				if((watchdog&0x7FFFFFFF)==0){
+					printf("[HARDWARE INTERRUPTION 1]\n");
+					fprintf(saida,"[HARDWARE INTERRUPTION 1]\n");
+					R[36]=0xE1AC04DA;
+					watchdog=0;
+					R[32]=1;
+					}
+				else{
+					watchdog--;
+				}
+			}
+			//fpu
+			else if((0x0000000F&controlFpu)!=0){
+				//printf("HERE\n");
+				if(decounter==0 && trig==1){
+					R[37]=R[32];
+					R[36]=0x01EEE754;
+					R[32]=2;
+					printf("[HARDWARE INTERRUPTION 2]\n");
+					fprintf(saida, "[HARDWARE INTERRUPTION 2]\n");
+					fpu();
+					controlFpu=controlFpu&0xFFFFFFE0;
+					trig=0;
+				}
+				else if(decounter ==0){
+					decounter = 0;
+					trig=1;
+					printf("parametro x %d parametro y %d \n Contador setado em %d\n", x, y, decounter);
+				}
+				else{
+					decounter--;
+				}
 			}
 			
-		printf("0x%08X\n",wholeWord[R[32]]);	
 		}
-		
+		//Sinalizador de interrupcao
 		if(R[32]==3){
 			printf("[SOFTWARE INTERRUPTION]\n");
 			fprintf(saida, "[SOFTWARE INTERRUPTION]\n");
