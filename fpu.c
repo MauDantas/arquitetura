@@ -10,6 +10,7 @@ unsigned long R[64];
 unsigned long x, y;
 float z;
 unsigned long controlFpu;
+int xisfloat, yisfloat;
 
 FILE *saida;
 char flag1=0; 
@@ -34,40 +35,83 @@ void cleanR(){
 //Simulador FPU (float process unit)
 void fpu(){
 	int xint;
+	float aux1, aux2;
 	switch((controlFpu&0x0000001F)){
 		case 0:
 			break;
 		case 1:
-			z=(x+y);
+			if(xisfloat==1)
+			aux1=*((float*)&x);
+			else
+			aux1=x;	
+			if(yisfloat==1)
+			aux2=*((float*)&y);
+			else
+			aux2=y;	
+			z=aux1+aux2;
+			printf("\n\nAdicao %f+%f=%f\n\n",aux1,aux2,z);
 			break;
 		case 2:
-			z= (x-y);
+			if(xisfloat==1)
+			aux1=*((float*)&x);
+			else
+			aux1=x;	
+			if(yisfloat==1)
+			aux2=*((float*)&y);
+			else
+			aux2=y;
+			z= aux1-aux2;
+			printf("\n\nSubtracao %f-%f=%f\n\n",aux1,aux2,z);
 			break;
 		case 3:
-			z= x*y;
+			if(xisfloat==1)
+			aux1=*((float*)&x);
+			else
+			aux1=x;	
+			if(yisfloat==1)
+			aux2=*((float*)&y);
+			else
+			aux2=y;
+			z= aux1*aux2;
+			printf("\n\nMultiplicacao %f*%f=%f\n\n",aux1,aux2,z);
 			break;
 		case 4:
+			if(xisfloat==1)
+			aux1=*((float*)&x);
+			else
+			aux1=x;	
+			if(yisfloat==1)
+			aux2=*((float*)&y);
+			else
+			aux2=y;
 			if(x==0 && y==0){
 				z=0;
 				controlFpu=0x00000020|controlFpu;
 			}
 			else{
-				z=x/y;
+				z=aux1/aux2;
 			}
+			printf("\n\nDivisao %f/%f=%f\n\n",aux1,aux2,z);
 			break;
 		case 5:
-			z = x;
+			memcpy(&x, &z, sizeof (x));
+			printf("\n\nAtribuicao x=0x%08X\n\n",x);
+			xisfloat=1;
 			break;
 		case 6:
-			z= y;
+			memcpy(&y, &z, sizeof (y));
+			printf("\n\nAtribuicao x=0x%08X\n\n",y);
+			yisfloat=1;
 			break;
 		case 7:
 			xint=z;
 			z=xint;
+			printf("\n\nPiso %f\n\n",z);
 			break;
 		case 8: 
 			xint=z;
 			z=xint+1;
+			printf("\n\nTeto %f\n\n",z);
 			break;
 		case 9:
 			xint=z;
@@ -77,8 +121,10 @@ void fpu(){
 			else{
 				z=xint;
 			}
+			printf("\n\nArredondamento %f\n\n",z);
 			break;
 		default: 
+			printf("\n\nOperacao invalida\n\n");
 			controlFpu=controlFpu|0x00000020;
 			break;
 		}
@@ -425,12 +471,12 @@ void excF(long instruction, long IM16 , long Rx, long Ry){
 			fprintf(saida,"[F] R%d = IPC >> 2 = 0x%08X, R%d = CR = 0x%08X, PC = 0x%08X\n", Rx,R[37],Ry,R[36], (IM16)<<2);
  */		break;
 		//reti
-		/*case 40:
-			 printf("reti r%d \n", Rx);
-			fprintf(saida, "reti r%d \n", Rx);
-			printf("[F] PC = Rx << 2 = 0x%08X\n",(R[Rx]<<2));
-			fprintf(saida, "[F] PC = Rx << 2 = 0x%08X\n",(R[Rx]<<2));	
-		 */}
+		case 40:
+			printf("reti r%d\n", Rx);
+			fprintf(saida, "reti r%d\n", Rx);
+			printf("[F] PC = R%d << 2 = 0x%08X\n",Rx,(R[Rx]<<2));
+			fprintf(saida, "[F] PC = R%d << 2 = 0x%08X\n",Rx,(R[Rx]<<2));	
+		 }
 }
 //printer de execucao de S
 void excS(long instruction, long S){
@@ -515,8 +561,8 @@ void excS(long instruction, long S){
 	break;
 	//int
 	case 63:
-		fprintf(saida, "int %d \n[S] CR = 0x%08X, PC = 0x0000000C\n", S, R[36]);
-		printf("int %d \n[S] CR = %d, PC = 0x0000000C\n", S, R[36]);
+		fprintf(saida, "int %d\n[S] CR = 0x%08X, PC = 0x0000000C\n", S, R[36]);
+		printf("int %d\n[S] CR = %d, PC = 0x0000000C\n", S, R[36]);
 	break;
 	}
 }
@@ -855,14 +901,6 @@ void RspF(unsigned long instruction, unsigned long IM16, unsigned long Rx, unsig
 			fprintf(saida,"[F] R%d = IPC >> 2 = 0x%08X, R%d = CR = 0x%08X, PC = 0x%08X\n", Rx,R[37],Ry,R[36], (IM16)<<2);
 
 		break;
-		//reti
-		case 40:
-			printf("reti r%d\n", Rx);
-			printf("[F] PC = R%d << 2 = 0x%08X\n",Rx, R[Rx]<<2);
-			fprintf(saida,"reti r%d\n", Rx);
-			fprintf(saida,"[F] PC = R%d << 2 = 0x%08X\n",Rx, R[Rx]<<2);
-			R[32]=R[Rx];
-		break;
 	}
 		
 	persistR0();
@@ -998,9 +1036,10 @@ int main(){
 	char* parse;
 	unsigned long E, Rz,Rx,Ry,IM16;
 	unsigned long S;
-	unsigned long decounter, instruc, watchdog;
+	unsigned long decounter, instruc, watchdog,aux, aux1;
 	watchdog=0;
-	unsigned long aux, b, aux1, trig, Sfpu;
+	unsigned long trig, Sfpu;
+	float a, b;
 	i=0;
 	trig =0;
 	decounter =0;
@@ -1107,15 +1146,19 @@ int main(){
 						//printf("Control fpu = 0x%08X\n", controlFpu);
 					}
 					else if((R[Ry]+IM16)==0x2202){
-						R[Rx]=z;
+						memcpy(&aux, &z, sizeof (aux));
+						R[Rx]=aux;
+						aux=0;
 						//printf("Z = 0x%08X\n", z);
 					}
 					else if((R[Ry]+IM16)==0x2201){
 						R[Rx]=y;
+						xisfloat=0;
 						printf("\n\nY = 0x%08X\n\n\n", y);
 					}
 					else if((R[Ry]+IM16)==0x2200){
 						R[Rx]=x;
+						yisfloat=0;
 						//printf("X = 0x%08X\n", x);
 					}
 					else{
@@ -1148,6 +1191,10 @@ int main(){
 				else if(instruction[R[32]]==38){
 					aux1=R[Rx];
 				}
+				//reti
+				else if(instruction[R[32]]==40){
+					aux1=R[Rx];
+				}
 				excF(instruction[R[32]], IM16 , Rx, Ry);
 				if(instruction[R[32]]==37){
 					R[32]=aux1;
@@ -1155,6 +1202,11 @@ int main(){
 					//printf("0x%08X\n", wholeWord[R[32]]);
 				}
 				else if(instruction[R[32]]==38){
+					R[32]=aux1;
+					//printf("PC %d \n", R[32]);
+					//printf("0x%08X\n", wholeWord[R[32]]);
+				}
+				else if(instruction[R[32]]==40){
 					R[32]=aux1;
 					//printf("PC %d \n", R[32]);
 					//printf("0x%08X\n", wholeWord[R[32]]);
@@ -1171,8 +1223,8 @@ int main(){
 					{
 						S=opS(wholeWord[R[32]]);
 						if(S==0){
-							fprintf(saida, "int 0 \n[S] CR = 0x00000000, PC = 0x00000000\n");
-							printf("int 0 \n[S] CR = 0x00000000, PC = 0x00000000\n");
+							fprintf(saida, "int 0\n[S] CR = 0x00000000, PC = 0x00000000\n");
+							printf("int 0\n[S] CR = 0x00000000, PC = 0x00000000\n");
 							fprintf(saida,"[END OF SIMULATION]\n");
 							printf("[END OF SIMULATION]\n");
 							fclose(saida);
@@ -1238,9 +1290,35 @@ int main(){
 					trig=0;
 				}
 				else if(decounter ==0){
-					decounter = 0;
-					trig=1;
-					printf("parametro x %d parametro y %d \n Contador setado em %d\n", x, y, decounter);
+					if((controlFpu&0x0000001F)==5 ||(controlFpu&0x0000001F)==6 ||(controlFpu&0x0000001F)==7 || (controlFpu&0x0000001F) ==8 || (controlFpu&0x0000001F) == 9){
+						decounter=0;
+						trig=1;
+					}
+					else{
+						if(xisfloat==1){
+							b=y;
+							memcpy(&aux1, &b, sizeof (aux1));
+							aux=x;
+						}
+						else if(yisfloat==1){
+							a=x;	
+							memcpy(&aux, &a, sizeof (aux));
+							aux1=y;
+						}
+						else{
+							a=x;	
+							memcpy(&aux, &a, sizeof (aux));
+							b=y;
+							memcpy(&aux1, &b, sizeof (aux1));
+						}
+						printf("\n\naux 1 eh 0x%08X e x eh 0x%08X a eh %f\n\n", aux,x, a);
+						printf("\n\naux 2 eh 0x%08X e x eh 0x%08X b eh %f\n\n", aux1,y, b);
+						aux=(aux&0x7F800000)>>23;
+						aux1=(aux1&0x7F800000)>>23;
+						decounter = abs(aux1-aux);
+						trig=1;
+						printf("parametro x %d parametro y %d \n Contador setado em %d\n", aux1, aux, decounter);
+					}
 				}
 				else{
 					decounter--;
