@@ -450,10 +450,10 @@ void excF(long instruction, long IM16 , long Rx, long Ry){
 		break;
 		//stb
 		case 23:
-			printf("stb r%d, %d, r%d\n", Rx,IM16,Ry);
-			fprintf(saida, "stb r%d, %d, r%d\n", Rx,IM16,Ry);
+			printf("stb r%d, 0x%04X, r%d\n", Rx,IM16,Ry);
+			fprintf(saida, "stb r%d, 0x%04X, r%d\n", Rx,IM16,Ry);
 			printf("[F] MEM[R%d + 0x%04X] = R%d = 0x%02X\n", Rx,IM16,Ry,(0x000000FF&R[Ry]));
-			fprintf(saida, "[F] MEM[R%d + 0x%04X]= R%d = 0x%02X\n", Rx,IM16,Ry,(0x000000FF&R[Ry]));
+			fprintf(saida, "[F] MEM[R%d + 0x%04X] = R%d = 0x%02X\n", Rx,IM16,Ry,(0x000000FF&R[Ry]));
 		break;
 		//call
 		case 37:
@@ -526,8 +526,8 @@ void excS(long instruction, long S){
 	break;
 	//bge
 	case 32:
-		printf("bge 0x%X\n", S);
-		fprintf(saida, "bge 0x%X\n", S);
+		printf("bge 0x%08X\n", S);
+		fprintf(saida, "bge 0x%08X\n", S);
 		printf("[S] PC = 0x%08X\n", PC);
 		fprintf(saida, "[S] PC = 0x%08X\n", PC);
 	break;
@@ -1012,15 +1012,17 @@ void RspS(unsigned long instruction, long S){
 int main(){
 	persistR0();
 	cleanR();
-	int i =0, j;
-	unsigned long wholeWord[1000];
+	int i =0, j, n=0;
+	unsigned long* wholeWord;
+	char *terminal;
 	FILE *hexa;
-	char destino[40]="2_fpu\0";
+	char destino[40]="poxim2\0";
 	char path[40];
+	wholeWord= malloc(i*sizeof(long));
 	printf("\n%s\n", destino);
 	strcpy(path,destino);
-	strcat(destino, ".hex");
-	//strcat(path,".out");
+	strcat(destino, ".input");
+	strcat(path,".output");
 	printf("\n%s\n", destino);
 	hexa = fopen(destino, "r");
 	if (hexa == NULL)  // Se houve erro na abertura
@@ -1029,12 +1031,16 @@ int main(){
 		 return;
 	  }
 	while(!feof(hexa)){
-		fscanf(hexa, "%X", &wholeWord[i]);  
 		i++;
+		printf("j %d\n", i);
+		wholeWord= realloc(wholeWord,i*sizeof(long));
+		fscanf(hexa, "%X", &wholeWord[i-1]);
+		printf ("%08X\n", wholeWord[i-1]);	
 	}
 	unsigned long *instruction;
-	//printf("j %d\n", i);
+	printf("j %d\n", i);
 	instruction =malloc(i*sizeof(long));
+	terminal =malloc(n*sizeof(char));
 	j=i;
 	for (i=0; i<j; i++){
 		instruction[i]=instrucao(wholeWord[i]);
@@ -1043,7 +1049,7 @@ int main(){
 	char* parse;
 	unsigned long E, Rz,Rx,Ry,IM16;
 	unsigned long S;
-	unsigned long decounter, instruc, watchdog,aux, aux1;
+	unsigned long decounter, instruc, watchdog,aux, aux1,aux2;
 	watchdog=0;
 	unsigned long trig, Sfpu;
 	float a, b;
@@ -1122,24 +1128,34 @@ int main(){
 				//stb
 				else if(instruction[R[32]]==23)
 				{
-					//printf("0x%08X\n",R[Ry]);
-					switch(IM16){
-						case 3:
-							wholeWord[Rx]=(R[Ry]&0x000000FF)+(wholeWord[Rx]&0xFFFFFF00);
-							//printf("0x%08X\n",wholeWord[Rx]);
-						break;
-						case 2:
-							wholeWord[Rx]=((R[Ry]&0x000000FF)<<8)+(wholeWord[Rx]&0xFFFF00FF);
-							//printf("0x%08X\n",wholeWord[Rx]);
-						break;
-						case 1:
-							wholeWord[Rx]=((R[Ry]&0x000000FF)<<16)+(wholeWord[Rx]&0xFF00FFFF);
-							//printf("0x%08X\n",wholeWord[Rx]);
-						break;
-						case 0:
-							wholeWord[Rx]=((R[Ry]&0x000000FF)<<24)+(wholeWord[Rx]&0x00FFFFFFF);
-							//printf("0x%08X\n",wholeWord[Rx]);
-						break;
+					//printf("\n\ncame here\n\n");
+					if((R[Rx]+IM16)==0x888B){
+						n++;
+						terminal=realloc(terminal,n*sizeof(char));
+						terminal[n-1]=R[Ry];
+						//printf("\n\nhere i put %c on terminal\n\n", terminal[n-1]);
+					}
+					else{
+						aux=(R[Rx]+IM16)%4;
+						printf("\n\nTHIS IS THE AUX %d\n\n", aux);
+						switch(aux){
+							case 3:
+								wholeWord[Rx]=(R[Ry]&0x000000FF)+(wholeWord[Rx]&0xFFFFFF00);
+								//printf("0x%08X\n",wholeWord[Rx]);
+							break;
+							case 2:
+								wholeWord[Rx]=((R[Ry]&0x000000FF)<<8)+(wholeWord[Rx]&0xFFFF00FF);
+								//printf("0x%08X\n",wholeWord[Rx]);
+							break;
+							case 1:
+								wholeWord[Rx]=((R[Ry]&0x000000FF)<<16)+(wholeWord[Rx]&0xFF00FFFF);
+								//printf("0x%08X\n",wholeWord[Rx]);
+							break;
+							case 0:
+								wholeWord[Rx]=((R[Ry]&0x000000FF)<<24)+(wholeWord[Rx]&0x00FFFFFFF);
+								//printf("0x%08X\n",wholeWord[Rx]);
+							break;
+						}
 					}
 				}
 				//ldw
@@ -1180,17 +1196,33 @@ int main(){
 				}	
 				//ldb 
 				else if (instruction[R[32]]==21){
-					//printf("b %d\n", IM16);
-					//printf("b %d\n", something);
-					int a=0;
-					aux=R[aux];
-					//printf("");
-					aux=aux/4;
-					aux=wholeWord[aux];
-					//printf("aux 0x%08X\n",aux );
-					a=aux>>something;
-					a=a&0x000000FF;
-					R[Rx]=a;
+					if(R[Ry]==0x888B){
+						R[Rx]=terminal[n-1];
+						printf("0x%08X\n",terminal[n-1]);
+					}
+					else{
+						aux=(R[Ry]+IM16)%4;
+						aux2=(R[Ry]+IM16)/4;
+						printf("\n\nTHIS IS THE RY %d, THIS IS THE AUX %d AND THIS IS THE INDEX %d\n\n", R[Ry],aux, aux2);
+						switch(aux){
+							case 3:
+								R[Rx]=(wholeWord[aux2]&0x000000FF);
+								printf("0x%08X\n",R[Rx]);
+							break;
+							case 2:
+								R[Rx]=(wholeWord[aux2]&0x0000FF00)>>8;
+								printf("\n\n0x%08X\n",R[Rx]);
+							break;
+							case 1:
+								R[Rx]=(wholeWord[aux2]&0x00FF0000)>>16;
+								printf("\n\n0x%08X\n",R[Rx]);
+							break;
+							case 0:
+								R[Rx]=(wholeWord[aux2]&0xFF000000)>>24;
+								printf("\n\nPrimeiro bit 0x%08X\n",R[Rx]);
+							break;
+						}
+					}
 				}
 				//call
 				else if (instruction[R[32]]==37){
@@ -1236,9 +1268,6 @@ int main(){
 						if(S==0){
 							fprintf(saida, "int 0\n[S] CR = 0x00000000, PC = 0x00000000\n");
 							printf("int 0\n[S] CR = 0x00000000, PC = 0x00000000\n");
-							fprintf(saida,"[END OF SIMULATION]\n");
-							printf("[END OF SIMULATION]\n");
-							fclose(saida);
 							break;
 						}
 						else{
@@ -1343,6 +1372,17 @@ int main(){
 			fprintf(saida, "[SOFTWARE INTERRUPTION]\n");
 			}	
 	}
+	printf("[TERMINAL]\n");
+	fprintf(saida, "[TERMINAL]\n");
+	i=0;
+	while(i<n){
+		printf("%c",terminal[i]);
+		fprintf(saida,"%c",terminal[i]);
+		i++;
+	}
+	fprintf(saida,"\n[END OF SIMULATION]\n");
+	printf("\n[END OF SIMULATION]\n");
+	fclose(saida);
 	fclose(hexa);
 	return 0;
 }
