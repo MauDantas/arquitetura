@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <math.h>
 
-unsigned long pilha[100];
+unsigned long pilha[1000];
 unsigned long R[64];
 unsigned long x, y;
 float z;
@@ -242,8 +242,8 @@ void excU(long instruction, long Rz , long Rx, long Ry, long extensao){
 			Rx=Rx+((extensao&0x00000002)<<4);
 			Ry=Ry+((extensao&0x00000001)<<5);
 			Rz=Rz+((extensao&0x00000004)<<3);
-			fprintf(saida, "add r%d, r%d, r%d \n",Rz,Rx,Ry);
-			printf("add r%d, r%d, r%d \n",Rz,Rx,Ry);
+			fprintf(saida, "add r%d, r%d, r%d\n",Rz,Rx,Ry);
+			printf("add r%d, r%d, r%d\n",Rz,Rx,Ry);
 			printf("[U] FR = 0x%08X, R%d = R%d + R%d = 0x%08X\n", R[35],Rz,Rx,Ry,R[Rz]);
 			fprintf(saida, "[U] FR = 0x%08X, R%d = R%d + R%d = 0x%08X\n", R[35],Rz,Rx,Ry,R[Rz]);
 		break;
@@ -346,6 +346,8 @@ void excU(long instruction, long Rz , long Rx, long Ry, long extensao){
 		break;
 		//push
 		case 24:
+			Rx=Rx+((extensao&0x00000002)<<4);
+			Ry=Ry+((extensao&0x00000001)<<5);
 			printf("push r%d, r%d\n", Rx, Ry);
 			fprintf(saida, "push r%d, r%d\n", Rx, Ry);
 			printf("[U] MEM[R%d--] = R%d = 0x%08X\n",Rx, Ry,R[Ry]);
@@ -353,6 +355,8 @@ void excU(long instruction, long Rz , long Rx, long Ry, long extensao){
 		break;
 		//pop
 		case 25:
+			Rx=Rx+((extensao&0x00000002)<<4);
+			Ry=Ry+((extensao&0x00000001)<<5);
 			printf("pop r%d, r%d\n", Rx, Ry);
 			fprintf(saida,"pop r%d, r%d\n", Rx, Ry);
 			printf("[U] R%d = MEM[++R%d] = 0x%08X\n", Rx, Ry,R[Rx]);
@@ -365,16 +369,16 @@ void excF(long instruction, long IM16 , long Rx, long Ry){
 	switch (instruction){
 		//addi
 		case 1:
-			printf("addi r%d, r%d, %d \n",Rx,Ry,IM16);
+			printf("addi r%d, r%d, %d\n",Rx,Ry,IM16);
 			fprintf(saida, "addi r%d, r%d, %d\n",Rx,Ry,IM16);
 			printf("[F] FR = 0x%08X, R%d = R%d + 0x%04X = 0x%08X\n", R[35],Rx,Ry,IM16,R[Rx]);
 			fprintf(saida, "[F] FR = 0x%08X, R%d = R%d + 0x%04X = 0x%08X\n", R[35],Rx,Ry,IM16,R[Rx]);
 		break;
 		//subi
 		case 3:
-			fprintf(saida, "subi r%d, r%d, %d \n",Rx,Ry,IM16);
-			printf("subi r%d, r%d, %d \n",Rx,Ry,IM16);
-			fprintf(saida, "[U] FR = 0x%08X, R%d = R%d - 0x%04X = 0x%08X\n", R[35],Rx,Ry,IM16,R[Rx]);
+			fprintf(saida, "subi r%d, r%d, %d\n",Rx,Ry,IM16);
+			printf("subi r%d, r%d, %d\n",Rx,Ry,IM16);
+			fprintf(saida, "[F] FR = 0x%08X, R%d = R%d - 0x%04X = 0x%08X\n", R[35],Rx,Ry,IM16,R[Rx]);
 			printf("[F] FR = 0x%08X, R%d = R%d - 0x%04X = 0x%08X\n", R[35],Rx,Ry,IM16,R[Rx]);	
 		break;
 		//muli
@@ -386,8 +390,8 @@ void excF(long instruction, long IM16 , long Rx, long Ry){
 		break;
 		//divi (DUVIDA - SLIDE 5)
 		case 7:
-			printf("divi r%d, r%d, %d \n",Rx,Ry,IM16);
-			fprintf(saida,"divi r%d, r%d, %d \n",Rx,Ry,IM16);
+			printf("divi r%d, r%d, %d\n",Rx,Ry,IM16);
+			fprintf(saida,"divi r%d, r%d, %d\n",Rx,Ry,IM16);
 			printf("[F] FR = 0x%08X, ER = 0x%08X, R%d = R%d / 0x%04X = 0x%08X\n", R[35],R[34],Rx,Ry,IM16,R[Rx]);
 			fprintf(saida,"[F] FR = 0x%08X, ER = 0x%08X, R%d = R%d / 0x%04X = 0x%08X\n", R[35],R[34],Rx,Ry,IM16,R[Rx]);
 		break;
@@ -699,11 +703,13 @@ void RspU(unsigned long instruction, unsigned long Rz, unsigned long Rx, unsigne
 				aux3=R[Rx];
 				aux4=R[Ry];
 				aux5=aux3/aux4;
-				R[Rz]=aux5;
 				R[34]=R[Rx]%R[Ry];
-				if(R[34]!=0)
+				R[Rz]=aux5;
+				
+				printf("\n\nR%d = %d/%d = %d, Resto eh %d\n\n",Rz,R[Rx],R[Ry],R[Rz], R[34]);
+				/* if(R[34]!=0)
 					if(R[35]<0x10)
-						R[35]=R[35]+0x00000010;	
+						R[35]=R[35]+0x00000010;	 */
 			}
 		break;
 		//cmp (DUVIDA - SLIDE 5)
@@ -788,6 +794,8 @@ void RspU(unsigned long instruction, unsigned long Rz, unsigned long Rx, unsigne
 		break;
 		//push
 		case 24:
+			Rx=Rx+((extensao&0x00000002)<<4);
+			Ry=Ry+((extensao&0x00000001)<<5);
 			pilha[R[Rx]]=R[Ry];
 			R[Rx]=R[Rx]-1;
 		break;
@@ -795,6 +803,8 @@ void RspU(unsigned long instruction, unsigned long Rz, unsigned long Rx, unsigne
 		case 25:
 			/* for(aux5=0;aux5<100;aux5++)
 				printf("Elemento %d %08x\n", aux5, pilha[aux5]);  */
+			Rx=Rx+((extensao&0x00000002)<<4);
+			Ry=Ry+((extensao&0x00000001)<<5);
 			R[Ry]=R[Ry]+1;
 			//printf("R%d = %d Pilha[%d] = %d\n", Ry, R[Ry], R[Ry], pilha[R[Ry]] );
 			R[Rx]=pilha[R[Ry]];
@@ -859,14 +869,12 @@ void RspF(unsigned long instruction, unsigned long IM16, unsigned long Rx, unsig
 			}
 			else 
 			{
-				aux3=IM16;
-				aux4=R[Ry];
-				aux5=aux4/aux3;
-				R[Rx]=aux5;
 				R[34]=R[Ry]%IM16;
-				if(R[34]!=0)
+				R[Rx]=R[Ry]/IM16;
+				printf("\n\nR%d = %d/%d = %d, Resto eh %d\n\n",Rx,R[Ry],IM16,R[Rx], R[34]);
+				/* if(R[34]!=0)
 					if(R[35]<0x10)
-						R[35]=R[35]+0x00000010;	
+						R[35]=R[35]+0x00000010;	 */
 			}
 		break;
 		//cmpi (DUVIDA - SLIDE 5)
@@ -1032,10 +1040,10 @@ int main(){
 	  }
 	while(!feof(hexa)){
 		i++;
-		printf("j %d\n", i);
+		//printf("j %d\n", i);
 		wholeWord= realloc(wholeWord,i*sizeof(long));
 		fscanf(hexa, "%X", &wholeWord[i-1]);
-		printf ("%08X\n", wholeWord[i-1]);	
+		//printf ("%08X\n", wholeWord[i-1]);	
 	}
 	unsigned long *instruction;
 	printf("j %d\n", i);
@@ -1137,22 +1145,23 @@ int main(){
 					}
 					else{
 						aux=(R[Rx]+IM16)%4;
-						printf("\n\nTHIS IS THE AUX %d\n\n", aux);
+						aux2=(R[Rx]+IM16)/4;
+						//printf("\n\nTHIS IS THE AUX %d\n\n", aux);
 						switch(aux){
 							case 3:
-								wholeWord[Rx]=(R[Ry]&0x000000FF)+(wholeWord[Rx]&0xFFFFFF00);
+								wholeWord[aux2]=(R[Ry]&0x000000FF)+(wholeWord[aux2]&0xFFFFFF00);
 								//printf("0x%08X\n",wholeWord[Rx]);
 							break;
 							case 2:
-								wholeWord[Rx]=((R[Ry]&0x000000FF)<<8)+(wholeWord[Rx]&0xFFFF00FF);
+								wholeWord[aux2]=((R[Ry]&0x000000FF)<<8)+(wholeWord[aux2]&0xFFFF00FF);
 								//printf("0x%08X\n",wholeWord[Rx]);
 							break;
 							case 1:
-								wholeWord[Rx]=((R[Ry]&0x000000FF)<<16)+(wholeWord[Rx]&0xFF00FFFF);
+								wholeWord[aux2]=((R[Ry]&0x000000FF)<<16)+(wholeWord[aux2]&0xFF00FFFF);
 								//printf("0x%08X\n",wholeWord[Rx]);
 							break;
 							case 0:
-								wholeWord[Rx]=((R[Ry]&0x000000FF)<<24)+(wholeWord[Rx]&0x00FFFFFFF);
+								wholeWord[aux2]=((R[aux2]&0x000000FF)<<24)+(wholeWord[aux2]&0x00FFFFFFF);
 								//printf("0x%08X\n",wholeWord[Rx]);
 							break;
 						}
@@ -1203,24 +1212,24 @@ int main(){
 					else{
 						aux=(R[Ry]+IM16)%4;
 						aux2=(R[Ry]+IM16)/4;
-						printf("\n\nTHIS IS THE RY %d, THIS IS THE AUX %d AND THIS IS THE INDEX %d\n\n", R[Ry],aux, aux2);
-						switch(aux){
+/* 						printf("\n\nTHIS IS THE RY %d, THIS IS THE AUX %d AND THIS IS THE INDEX %d\n\n", R[Ry],aux, aux2);
+ */						switch(aux){
 							case 3:
 								R[Rx]=(wholeWord[aux2]&0x000000FF);
-								printf("0x%08X\n",R[Rx]);
-							break;
+/* 								printf("0x%08X\n",R[Rx]);
+ */							break;
 							case 2:
 								R[Rx]=(wholeWord[aux2]&0x0000FF00)>>8;
-								printf("\n\n0x%08X\n",R[Rx]);
-							break;
+/* 								printf("\n\n0x%08X\n",R[Rx]);
+ */							break;
 							case 1:
 								R[Rx]=(wholeWord[aux2]&0x00FF0000)>>16;
-								printf("\n\n0x%08X\n",R[Rx]);
-							break;
+/* 								printf("\n\n0x%08X\n",R[Rx]);
+ */							break;
 							case 0:
 								R[Rx]=(wholeWord[aux2]&0xFF000000)>>24;
-								printf("\n\nPrimeiro bit 0x%08X\n",R[Rx]);
-							break;
+/* 								printf("\n\nPrimeiro bit 0x%08X\n",R[Rx]);
+ */							break;
 						}
 					}
 				}
