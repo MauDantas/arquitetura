@@ -476,11 +476,11 @@ void excF(long instruction, long IM16 , long Rx, long Ry){
 		break;
 		//isr
 		case 39:
-			/* printf("isr r%d, r%d, 0x%04X\n", Rx,Ry,IM16);
+			printf("isr r%d, r%d, 0x%04X\n", Rx,Ry,IM16);
 			fprintf(saida,"isr r%d, r%d, 0x%04X\n", Rx,Ry,IM16);
 			printf("[F] R%d = IPC >> 2 = 0x%08X, R%d = CR = 0x%08X, PC = 0x%08X\n", Rx,R[37],Ry,R[36], (IM16)<<2);
 			fprintf(saida,"[F] R%d = IPC >> 2 = 0x%08X, R%d = CR = 0x%08X, PC = 0x%08X\n", Rx,R[37],Ry,R[36], (IM16)<<2);
- */		break;
+		break;
 		//reti
 		case 40:
 			printf("reti r%d\n", Rx);
@@ -706,7 +706,7 @@ void RspU(unsigned long instruction, unsigned long Rz, unsigned long Rx, unsigne
 				R[34]=R[Rx]%R[Ry];
 				R[Rz]=aux5;
 				
-				printf("\n\nR%d = %d/%d = %d, Resto eh %d\n\n",Rz,R[Rx],R[Ry],R[Rz], R[34]);
+				//printf("\n\nR%d = %d/%d = %d, Resto eh %d\n\n",Rz,R[Rx],R[Ry],R[Rz], R[34]);
 				/* if(R[34]!=0)
 					if(R[35]<0x10)
 						R[35]=R[35]+0x00000010;	 */
@@ -871,7 +871,7 @@ void RspF(unsigned long instruction, unsigned long IM16, unsigned long Rx, unsig
 			{
 				R[34]=R[Ry]%IM16;
 				R[Rx]=R[Ry]/IM16;
-				printf("\n\nR%d = %d/%d = %d, Resto eh %d\n\n",Rx,R[Ry],IM16,R[Rx], R[34]);
+				//printf("\n\nR%d = %d/%d = %d, Resto eh %d\n\n",Rx,R[Ry],IM16,R[Rx], R[34]);
 				/* if(R[34]!=0)
 					if(R[35]<0x10)
 						R[35]=R[35]+0x00000010;	 */
@@ -905,17 +905,15 @@ void RspF(unsigned long instruction, unsigned long IM16, unsigned long Rx, unsig
 		case 19: 
 			R[Rx]=IM16^R[Ry];
 		break;
-		//isr
+		/* //isr
 		case 39:
-			R[Rx]=R[37];
-			R[Ry]=R[36];
-			R[32]=IM16-1;
 			printf("isr r%d, r%d, 0x%04X\n", Rx,Ry,IM16);
 			fprintf(saida,"isr r%d, r%d, 0x%04X\n", Rx,Ry,IM16);
 			printf("[F] R%d = IPC >> 2 = 0x%08X, R%d = CR = 0x%08X, PC = 0x%08X\n", Rx,R[37],Ry,R[36], (IM16)<<2);
 			fprintf(saida,"[F] R%d = IPC >> 2 = 0x%08X, R%d = CR = 0x%08X, PC = 0x%08X\n", Rx,R[37],Ry,R[36], (IM16)<<2);
+		
 
-		break;
+		break; */
 	}
 		
 	persistR0();
@@ -1059,7 +1057,7 @@ int main(){
 	unsigned long S;
 	unsigned long decounter, instruc, watchdog,aux, aux1,aux2;
 	watchdog=0;
-	unsigned long trig, Sfpu;
+	unsigned long trig, Sfpu, stb_fixer;
 	float a, b;
 	i=0;
 	trig =0;
@@ -1149,19 +1147,29 @@ int main(){
 						//printf("\n\nTHIS IS THE AUX %d\n\n", aux);
 						switch(aux){
 							case 3:
-								wholeWord[aux2]=(R[Ry]&0x000000FF)+(wholeWord[aux2]&0xFFFFFF00);
-								//printf("0x%08X\n",wholeWord[Rx]);
+								printf("\n\n0x%08X\n",wholeWord[aux2]);
+								wholeWord[aux2]=wholeWord[aux2]&0xFFFFFF00;
+								wholeWord[aux2]=(R[Ry]&0x000000FF)+wholeWord[aux2];
+								printf("\n\nMem=%d Ry eh %d seu valor eh 0x%08X, IM16 eh%d\n Como resultado foi escrito0x%08X\n",aux2, Ry, R[Ry],IM16, wholeWord[aux2]);
 							break;
 							case 2:
-								wholeWord[aux2]=((R[Ry]&0x000000FF)<<8)+(wholeWord[aux2]&0xFFFF00FF);
-								//printf("0x%08X\n",wholeWord[Rx]);
+								printf("\n\n0x%08X\n",wholeWord[aux2]);
+								wholeWord[aux2]=(wholeWord[aux2]&0xFFFF00FF);
+								wholeWord[aux2]=((R[Ry]&0x000000FF)<<8)+wholeWord[aux2];
+								printf("\n\nMem=%d Ry eh %d seu valor eh 0x%08X, IM16 eh%d\n Como resultado foi escrito0x%08X\n",aux2, Ry, R[Ry],IM16, wholeWord[aux2]);
 							break;
 							case 1:
-								wholeWord[aux2]=((R[Ry]&0x000000FF)<<16)+(wholeWord[aux2]&0xFF00FFFF);
+								printf("\n\n0x%08X\n",wholeWord[aux2]);
+								wholeWord[aux2]=(wholeWord[aux2]&0xFF00FFFF);
+								wholeWord[aux2]=((R[Ry]&0x000000FF)<<16)+wholeWord[aux2];
+								printf("\n\nMem=%d Ry eh %d seu valor eh 0x%08X, IM16 eh%d\n Como resultado foi escrito0x%08X\n",aux2, Ry, R[Ry],IM16, wholeWord[aux2]);
 								//printf("0x%08X\n",wholeWord[Rx]);
 							break;
 							case 0:
-								wholeWord[aux2]=((R[aux2]&0x000000FF)<<24)+(wholeWord[aux2]&0x00FFFFFFF);
+								printf("\n\n0x%08X\n",wholeWord[aux2]);
+								wholeWord[aux2]=(wholeWord[aux2]&0x00FFFFFFF);
+								wholeWord[aux2]=((R[Ry]&0x000000FF)<<24)+wholeWord[aux2];
+								printf("\n\nMem=%d Ry eh %d seu valor eh 0x%08X, IM16 eh%d\n Como resultado foi escrito0x%08X\n",aux2, Ry, R[Ry],IM16, wholeWord[aux2]);
 								//printf("0x%08X\n",wholeWord[Rx]);
 							break;
 						}
@@ -1243,6 +1251,12 @@ int main(){
 				else if(instruction[R[32]]==38){
 					aux1=R[Rx];
 				}
+				//isr
+				else if(instruction[R[32]]==39){
+					R[Rx]=R[37];
+					R[Ry]=R[36];
+					aux1=IM16;
+				}
 				//reti
 				else if(instruction[R[32]]==40){
 					aux1=R[Rx];
@@ -1257,6 +1271,10 @@ int main(){
 					R[32]=aux1;
 					//printf("PC %d \n", R[32]);
 					//printf("0x%08X\n", wholeWord[R[32]]);
+				}
+				else if(instruction[R[32]]==39){
+					R[32]=aux1;	
+					printf("\n\nR[32]=%d\n\n", R[32]);
 				}
 				else if(instruction[R[32]]==40){
 					R[32]=aux1;
@@ -1321,9 +1339,6 @@ int main(){
 					watchdog=0;
 					R[32]=1;
 					}
-				else{
-					watchdog--;
-				}
 			}
 			//fpu
 			else if((0x0000000F&controlFpu)!=0){
@@ -1375,6 +1390,9 @@ int main(){
 			}
 			
 		}
+		//watchdog decounter
+		if((watchdog&0x7FFFFFFF)!=0)
+			watchdog--;
 		//Sinalizador de interrupcao
 		if(R[32]==3){
 			printf("[SOFTWARE INTERRUPTION]\n");
