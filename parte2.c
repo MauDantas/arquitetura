@@ -7,13 +7,13 @@
 #include <inttypes.h>
 #include <ctype.h>
 
-unsigned long pilha[1000];
-unsigned long int_pilha[3];
-unsigned long stopme;
-unsigned long R[64];
-unsigned long x, y;
+unsigned int* pilha = NULL;
+unsigned int int_pilha[3];
+unsigned int stopme;
+unsigned int R[64];
+unsigned int x, y;
 float z;
-unsigned long controlFpu;
+unsigned int controlFpu;
 int xisfloat, yisfloat, zisint;
 
 FILE *saida;
@@ -38,7 +38,7 @@ void cleanR(){
 
 //Simulador FPU (float process unit)
 void fpu(){
-	int xint;
+	unsigned int xint;
 	float aux1, aux2;
 	switch((controlFpu&0x0000001F)){
 		case 0:
@@ -148,14 +148,14 @@ void fpu(){
 			controlFpu=0x00000020;
 			break;
 		}
-		printf("X %d 0x%08X\n Y %d 0x%08X\n Z %f 0x%08X\n", x,x,y,y,z,z);
-		system("pause");
+		//printf("X %d 0x%08X\n Y %d 0x%08X\n Z %f 0x%08X\n", x,x,y,y,z,z);
+		//system("pause");
 } 
 //R0 sempre zero
 void persistR0(){
 	R[0]=0;}
 //Metodo de retorno da operacao utilizada
-char* operacao (long instruction){
+char* operacao (unsigned int instruction){
 	switch(instruction){
 		case 0:
 			return "add U\0";
@@ -245,12 +245,12 @@ char* operacao (long instruction){
 			return "erroE\0";}
 }
 //retorna a instrução
-long instrucao(unsigned long wholeWord){
-	int instruction=(wholeWord & 0xFC000000)>>26;
+unsigned int instrucao(unsigned int wholeWord){
+	unsigned int instruction=(wholeWord & 0xFC000000)>>26;
 	return instruction;
 }
 //printer de execucao U
-void excU(long instruction, long Rz , long Rx, long Ry, long extensao){
+void excU(unsigned int instruction, unsigned int Rz , unsigned int Rx, unsigned int Ry, unsigned int extensao){
 	switch (instruction){
 		//add
 		case 0:
@@ -388,7 +388,7 @@ void excU(long instruction, long Rz , long Rx, long Ry, long extensao){
 		}
 }
 //printer de execucao de F
-void excF(long instruction, long IM16 , long Rx, long Ry){
+void excF(unsigned int instruction, unsigned int IM16 , unsigned int Rx, unsigned int Ry){
 	switch (instruction){
 		//addi
 		case 1:
@@ -513,7 +513,7 @@ void excF(long instruction, long IM16 , long Rx, long Ry){
 		 }
 }
 //printer de execucao de S
-void excS(long instruction, long S){
+void excS(unsigned int instruction, unsigned int S){
 	int PC=R[32]*4;
 	switch (instruction){
 	//bun
@@ -601,49 +601,49 @@ void excS(long instruction, long S){
 	}
 }
 //Parametros para operacoes tipo U
-long opXU(long wholeWord){
-	long Rx=(wholeWord&0x000003E0)>>05;
+unsigned int opXU(unsigned int wholeWord){
+	unsigned int Rx=(wholeWord&0x000003E0)>>05;
 	return Rx;
 }
-long opZU(long wholeWord){
-	long Rz=(wholeWord&0x00007C00)>>10;
+unsigned int opZU(unsigned int wholeWord){
+	unsigned int Rz=(wholeWord&0x00007C00)>>10;
 	return Rz;
 }
-long opYU(long wholeWord){
-	long Ry=(wholeWord&0x0000001F);
+unsigned int opYU(unsigned int wholeWord){
+	unsigned int Ry=(wholeWord&0x0000001F);
 	return Ry;
 }
-long opEU(long wholeWord){
-	long E=(wholeWord&0x00038000)>>15;
+unsigned int opEU(unsigned int wholeWord){
+	unsigned int E=(wholeWord&0x00038000)>>15;
 	return E;
 } 
 //Parametros para operacoes tipo F
-long opxF(long wholeWord){
-	long Rx=  (wholeWord&0x000003E0)>>05;
+unsigned int opxF(unsigned int wholeWord){
+	unsigned int Rx=  (wholeWord&0x000003E0)>>05;
 	persistR0();
 	return Rx;
 }
-long opyF(long wholeWord){
-	long Ry=  (wholeWord&0x0000001F);
+unsigned int opyF(unsigned int wholeWord){
+	unsigned int Ry=  (wholeWord&0x0000001F);
 	return Ry;
 }
-long opIM16F(long wholeWord){
-	long IM16=(wholeWord&0x03FFFC00)>>10;
+unsigned int opIM16F(unsigned int wholeWord){
+	unsigned int IM16=(wholeWord&0x03FFFC00)>>10;
 	return IM16;
 }
 //Parametros para operacoes tipo S
-long opS(long wholeWord){
-	long IM16=(wholeWord&0x03FFFFFF);
+unsigned int opS(unsigned int wholeWord){
+	unsigned int IM16=(wholeWord&0x03FFFFFF);
 	//printf("IM16: %d \n", IM16);
 	persistR0();
 	return IM16;
 }
 //modificacoes feitas por instrucoes tipo U
-void RspU(unsigned long instruction, unsigned long Rz, unsigned long Rx, unsigned long Ry, long extensao){
-	unsigned long aux1, aux2;
-	unsigned long aux3;
-	long aux4;
-	long aux5;
+void RspU(unsigned int instruction, unsigned int Rz, unsigned int Rx, unsigned int Ry, unsigned int extensao){
+	unsigned int aux1, aux2;
+	unsigned int aux3;
+	unsigned int aux4;
+	unsigned int aux5;
 	uint64_t mult, param1, param2;
 	switch (instruction){
 		//add
@@ -813,9 +813,9 @@ void RspU(unsigned long instruction, unsigned long Rz, unsigned long Rx, unsigne
 }
 
 //modificacoes feitas por instrucoes tipo F
-void RspF(unsigned long instruction, unsigned long IM16, unsigned long Rx, unsigned long Ry){
-	unsigned long aux1, aux2;
-	unsigned long aux3, aux4, aux5;
+void RspF(unsigned int instruction, unsigned int IM16, unsigned int Rx, unsigned int Ry){
+	unsigned int aux1, aux2;
+	unsigned int aux3, aux4, aux5;
 	uint64_t superaux;
 	switch (instruction){
 		//addi
@@ -923,8 +923,8 @@ void RspF(unsigned long instruction, unsigned long IM16, unsigned long Rx, unsig
 	persistR0();
 }
 //modificacoes feitas por instrucoes tipo S
-void RspS(unsigned long instruction, long S){
-	long aux1;
+void RspS(unsigned int instruction, unsigned int S){
+	unsigned int aux1;
 	switch (instruction){
 	//bun
 	case 26:
@@ -1025,24 +1025,25 @@ void RspS(unsigned long instruction, long S){
 
 }
 int main(int argc, char *argv[]){
+	pilha=(unsigned int*)malloc(1000*sizeof(sizeof(unsigned int)));
 	persistR0();
 	cleanR();
 	int_pilha[0]=0;
 	int_pilha[1]=0;
 	int_pilha[2]=0;
 	int i =0, j, n=0;
-	unsigned long* wholeWord;
+	unsigned int* wholeWord;
 	char *terminal;
 	FILE *hexa;
 	//char destino[40]="poxim2\0";
 	//char path[40];
-	wholeWord= malloc(i*sizeof(long));
+	wholeWord= malloc(i*sizeof(unsigned int));
 	char origem[100];
 	char destino[100];
 	strcpy(origem,argv[1]);
 	strcpy(destino,argv[2]);
-	strcat(origem, ".input");
-	strcat(destino,".output");
+	//strcat(origem, ".input");
+	//strcat(destino,".output");
 	//printf("\n%s\n", destino);
 	printf("\n%s\n", origem);
 	printf("\n%s\n", destino);
@@ -1050,18 +1051,19 @@ int main(int argc, char *argv[]){
 	if (hexa == NULL)  // Se houve erro na abertura
 	  {
 		 printf("Problemas na abertura do arquivo\n");
-		 return;
+		 return 1;
 	  }
 	while(!feof(hexa)){
 		i++;
 		//printf("j %d\n", i);
-		wholeWord= realloc(wholeWord,i*sizeof(long));
+		wholeWord= realloc(wholeWord,i*sizeof(unsigned int));
+		wholeWord[i-1]=0;
 		fscanf(hexa, "%X", &wholeWord[i-1]);
 		//printf ("%08X\n", wholeWord[i-1]);	
 	}
-	unsigned long *instruction;
+	unsigned int *instruction;
 	printf("j %d\n", i);
-	instruction =malloc(i*sizeof(long));
+	instruction =malloc(i*sizeof(unsigned int));
 	terminal =malloc(n*sizeof(char));
 	j=i;
 	for (i=0; i<j; i++){
@@ -1069,11 +1071,11 @@ int main(int argc, char *argv[]){
 		//printf ("%08X\n", wholeWord[i]);
 	}
 	char* parse;
-	unsigned long E, Rz,Rx,Ry,IM16;
-	unsigned long S;
-	unsigned long decounter, instruc, watchdog,aux, aux1,aux2, atual, counter;
+	unsigned int E, Rz,Rx,Ry,IM16;
+	unsigned int S;
+	unsigned int decounter, instruc, watchdog,aux, aux1 = 0,aux2, atual, counter;
 	watchdog=0;
-	unsigned long trig, Sfpu, stb_fixer;
+	unsigned int trig, Sfpu, stb_fixer;
 	float a, b;
 	counter=0;
 	i=0;
@@ -1439,8 +1441,8 @@ int main(int argc, char *argv[]){
 						b=y;
 						memcpy(&aux1, &b, sizeof (aux1));
 					}
-				printf("\n\naux 1 eh 0x%08X e x eh 0x%08X a eh %f\n\n", aux,x, a);
-				printf("\n\naux 2 eh 0x%08X e y eh 0x%08X b eh %f\n\n", aux1,y, b);
+				//printf("\n\naux 1 eh 0x%08X e x eh 0x%08X a eh %f\n\n", aux,x, a);
+				//printf("\n\naux 2 eh 0x%08X e y eh 0x%08X b eh %f\n\n", aux1,y, b);
 				aux=(aux&0x7F800000)>>23;
 				aux1=(aux1&0x7F800000)>>23;
 				decounter = abs(aux1-aux);
