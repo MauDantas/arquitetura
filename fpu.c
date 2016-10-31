@@ -8,7 +8,8 @@
 #include <ctype.h>
 
 unsigned int* pilha = NULL;
-unsigned int** cache_dados, cache_instrucoes;
+unsigned int** cache_dados;
+unsigned int** cache_instr;
 unsigned int int_pilha[3];
 unsigned int stopme;
 unsigned int R[64];
@@ -482,19 +483,12 @@ void excU(unsigned int instruction, unsigned int Rz , unsigned int Rx, unsigned 
 		case 24:
 			Rx=Rx+((extensao&0x00000002)<<4);
 			Ry=Ry+((extensao&0x00000001)<<5);
-			printf("push %s, %s\n", reg_name(Rx),reg_name(Ry));
-			fprintf(saida, "push %s, %s\n",reg_name(Rx),reg_name(Ry));
-			printf("[U] MEM[%s--] = %s = 0x%08X\n",reg_name_UP(Rx),reg_name_UP(Ry),R[Ry]);
-			fprintf(saida, "[U] MEM[%s--] = %s = 0x%08X\n",reg_name_UP(Rx),reg_name_UP(Ry),R[Ry]);
+			
 		break;
 		//pop
 		case 25:
 			Rx=Rx+((extensao&0x00000002)<<4);
 			Ry=Ry+((extensao&0x00000001)<<5);
-			printf("pop %s, %s\n",reg_name(Rx),reg_name(Ry));
-			fprintf(saida,"pop %s, %s\n",reg_name(Rx),reg_name(Ry));
-			printf("[U] %s = MEM[++%s] = 0x%08X\n", reg_name_UP(Rx),reg_name_UP(Ry),R[Rx]);
-			fprintf(saida, "[U] %s = MEM[++%s] = 0x%08X\n", reg_name_UP(Rx),reg_name_UP(Ry),R[Rx]);
 		break;
 		}
 }
@@ -902,23 +896,6 @@ void RspU(unsigned int instruction, unsigned int Rz, unsigned int Rx, unsigned i
 			R[Rz]=R[Rx]^R[Ry];
 		break;
 		//push
-		case 24:
-			Rx=Rx+((extensao&0x00000002)<<4);
-			Ry=Ry+((extensao&0x00000001)<<5);
-			pilha[R[Rx]]=R[Ry];
-			R[Rx]=R[Rx]-1;
-		break;
-		//pop
-		case 25:
-			/* for(aux5=0;aux5<100;aux5++)
-				printf("Elemento %d %08x\n", aux5, pilha[aux5]);  */
-			Rx=Rx+((extensao&0x00000002)<<4);
-			Ry=Ry+((extensao&0x00000001)<<5);
-			R[Ry]=R[Ry]+1;
-			//printf("R%d = %d Pilha[%d] = %d\n", Ry, R[Ry], R[Ry], pilha[R[Ry]] );
-			R[Rx]=pilha[R[Ry]];
-			//printf("Rx = 0x%08X\n", R[Rx]);
-		break;	
 		}
 }
 
@@ -1137,7 +1114,7 @@ void RspS(unsigned int instruction, unsigned int S){
 
 }
 /*0-v 1-Age 2-Id 3-6 Words 7-V 8-I 9-ID 10-13 */
-void instr_cache(unsigned int PC, unsigned int op, unsigned int* wholeword){
+void instr_cache(unsigned int PC, unsigned int op, unsigned int* wholeWord, unsigned int tamanho){
 	unsigned int id_p=(0xFFFFFFE0)>>5;
 	unsigned int n_palavra= PC&0x00000003;
 	unsigned int linha= (PC&0x0000001C)>>2;
@@ -1162,14 +1139,14 @@ void instr_cache(unsigned int PC, unsigned int op, unsigned int* wholeword){
 	if(((cache_instr[linha][0]==1)&&(id_p==cache_instr[linha][2]))){
 		hit = 1;
 		counter_hits_data++;
-		id_p==cache_instr[linha][1]=0;
+		cache_instr[linha][1]=0;
 		fprintf(saida, "HIT @ 0x%08X]\n", PC<<2);
 		bloco =0;
 		}
 	else if((cache_instr[linha][7]==1)&&(id_p==cache_instr[linha][9])){
 		hit=1;
 		counter_hits_data++;
-		id_p==cache_instr[linha][8]=0;
+		cache_instr[linha][8]=0;
 		fprintf(saida, "HIT @ 0x%08X]\n", PC<<2);
 		bloco=1;
 	}
@@ -1200,51 +1177,51 @@ void instr_cache(unsigned int PC, unsigned int op, unsigned int* wholeword){
 		}
 	}
 	else if(op==0 && hit ==0){
-		for(l=0, l<4, l++){
+		for(l=0; l<4; l++){
 			if(cache_instr[linha][0]==0){
 				if(PC<tamanho){
-					cache_instr[linha][l+3]=wholeWord[PC]
+					cache_instr[linha][l+3]=wholeWord[PC];
 				}
 				else{
 					PC=0;
-					cache_instr[linha][l+3]=wholeWord[PC]
+					cache_instr[linha][l+3]=wholeWord[PC];
 				}
 				PC++;
 			}
 			else if(cache_instr[linha][7]==0){
 				if(PC<tamanho){
-					cache_instr[linha][l+10]=wholeWord[PC]
+					cache_instr[linha][l+10]=wholeWord[PC];
 				}
 				else{
 					PC=0;
-					cache_instr[linha][l+10]=wholeWord[PC]
+					cache_instr[linha][l+10]=wholeWord[PC];
 				}
 				PC++;
 			}
 			else if(cache_instr[linha][2]>cache_instr[linha][9]){
 				if(PC<tamanho){
-					cache_instr[linha][l+3]=wholeWord[PC]
+					cache_instr[linha][l+3]=wholeWord[PC];
 				}
 				else{
 					PC=0;
-					cache_instr[linha][l+3]=wholeWord[PC]
+					cache_instr[linha][l+3]=wholeWord[PC];
 				}
 				PC++;
 			}
 			else{
 				if(PC<tamanho){
-					cache_instr[linha][l+10]=wholeWord[PC]
+					cache_instr[linha][l+10]=wholeWord[PC];
 				}
 				else{
 					PC=0;
-					cache_instr[linha][l+10]=wholeWord[PC]
+					cache_instr[linha][l+10]=wholeWord[PC];
 				}
 				PC++;
 			}
 		}
 	}
 }
-void dado_cache(unsigned int PC, unsigned int op, unsigned int* wholeWord, tamanho){
+void dado_cache(unsigned int PC, unsigned int op, unsigned int* wholeWord, unsigned int tamanho){
 	unsigned int id_p=(0xFFFFFFE0)>>5;
 	unsigned int n_palavra= PC&0x00000003;
 	unsigned int linha= (PC&0x0000001C)>>2;
@@ -1269,14 +1246,14 @@ void dado_cache(unsigned int PC, unsigned int op, unsigned int* wholeWord, taman
 	if(((cache_dados[linha][0]==1)&&(id_p==cache_dados[linha][2]))){
 		hit = 1;
 		counter_hits_data++;
-		id_p==cache_dados[linha][1]=0;
+		cache_dados[linha][1]=0;
 		fprintf(saida, "HIT @ 0x%08X]\n", PC<<2);
 		bloco =0;
 		}
 	else if((cache_dados[linha][7]==1)&&(id_p==cache_dados[linha][9])){
 		hit=1;
 		counter_hits_data++;
-		id_p==cache_dados[linha][8]=0;
+		cache_dados[linha][8]=0;
 		fprintf(saida, "HIT @ 0x%08X]\n", PC<<2);
 		bloco=1;
 	}
@@ -1307,13 +1284,11 @@ void dado_cache(unsigned int PC, unsigned int op, unsigned int* wholeWord, taman
 		}
 	}
 	else if(op==0 && hit ==0){
-		if(){
-			cache_dados[linha][0]=1;
-			cache_dados[linha][1]=0;
-			cache_dados[linha][2]=id_p;
-		}
+		cache_dados[linha][0]=1;
+		cache_dados[linha][1]=0;
+		cache_dados[linha][2]=id_p;
 		PC=0xFFFFFFFC&PC;
-		for(l=0, l<4, l++){
+		for(l=0; l<4; l++){
 			if(cache_dados[linha][0]==0){
 				if(PC<tamanho){
 					cache_dados[linha][l+3]=wholeWord[PC];
@@ -1365,22 +1340,19 @@ int main(int argc, char *argv[]){
 	int_pilha[0]=0;
 	int_pilha[1]=0;
 	int_pilha[2]=0;
-	int i =0, j, n=0;
+	int i =0,l=8, j, n=0;
 	counter_instr=0;
 	counter_data=0;
 	counter_hits_data=0;
 	counter_hits_instr=0;
-	cache_dados=(unsigned int**)malloc(8*sizeof(*int));
-	cache_instrucoes=(unsigned int**)malloc(8*sizeof(*int));
-	for (l=0; l++; l<8){
+	cache_dados=(unsigned int**)malloc(l * sizeof(int*));
+	cache_instr=(unsigned int**)malloc(l * sizeof(int*));
+	for (l=0; l<8; l++){
 		cache_dados[l]=(unsigned int*)malloc(14*sizeof(int));
-		cache_instrucoes[l]=(unsigned int*)malloc(14*sizeof(int))
-		
-	}
-	for(n=0;n<8;n++){
-		for(l=0;l<14;l++){
-			cache_dados[n][l]=0;
-			cache_instrucoes[n][l]=0;
+		cache_instr[l]=(unsigned int*)malloc(14*sizeof(int));		
+		for(n=0;n<14;n++){
+			cache_dados[l][n]=0;
+			cache_instr[l][n]=0;
 		}
 	}
 	unsigned int* wholeWord;
@@ -1410,7 +1382,7 @@ int main(int argc, char *argv[]){
 		wholeWord= realloc(wholeWord,i*sizeof(unsigned int));
 		wholeWord[i-1]=0;
 		fscanf(hexa, "%X", &wholeWord[i-1]);
-		//printf ("%08X\n", wholeWord[i-1]);	
+//		printf ("%08X\n", wholeWord[i-1]);
 	}
 	unsigned int *instruction;
 	printf("j %d\n", i);
@@ -1446,7 +1418,7 @@ int main(int argc, char *argv[]){
 	#####################################################
 	*/
 	while(1){
-		instr_cache();
+		//instr_cache();
 		//printf("0x%08X\n", wholeWord[R[32]]);
 		atual=R[32];
 		parse=operacao(instruction[R[32]]);
@@ -1469,9 +1441,35 @@ int main(int argc, char *argv[]){
 				RspU(instruction[R[32]], Rz, Rx, Ry,E);
 				//printf("Rz R%d Rx R%d Ry R%d\n",U[1], U[2], U[3]);
 				excU(instruction[R[32]], Rz ,Rx, Ry,E);
-				R[32]++;
 				persistR0();
 				//R[35]=R[35]&0xFFFFFFDF;
+				//push
+				if(instruction[R[32]]==24){
+					Rx=Rx+((E&0x00000002)<<4);
+					Ry=Ry+((E&0x00000001)<<5);
+					printf("push %s, %s\n", reg_name(Rx),reg_name(Ry));
+					fprintf(saida, "push %s, %s\n",reg_name(Rx),reg_name(Ry));
+					printf("[U] MEM[%s--] = %s = 0x%08X\n",reg_name_UP(Rx),reg_name_UP(Ry),R[Ry]);
+					fprintf(saida, "[U] MEM[%s--] = %s = 0x%08X\n",reg_name_UP(Rx),reg_name_UP(Ry),R[Ry]);
+					wholeWord[R[Rx]]=R[Ry];
+					R[Rx]=R[Rx]-1;
+				}
+				//pop
+				else if (instruction[R[32]]==25){
+					/* for(aux5=0;aux5<100;aux5++)
+					printf("Elemento %d %08x\n", aux5, pilha[aux5]);  */
+					Rx=Rx+((E&0x00000002)<<4);
+					Ry=Ry+((E&0x00000001)<<5);
+					printf("pop %s, %s\n",reg_name(Rx),reg_name(Ry));
+					fprintf(saida,"pop %s, %s\n",reg_name(Rx),reg_name(Ry));
+					printf("[U] %s = MEM[++%s] = 0x%08X\n", reg_name_UP(Rx),reg_name_UP(Ry),R[Rx]);
+					fprintf(saida, "[U] %s = MEM[++%s] = 0x%08X\n", reg_name_UP(Rx),reg_name_UP(Ry),R[Rx]);
+					R[Ry]=R[Ry]+1;
+					//printf("R%d = %d Pilha[%d] = %d\n", Ry, R[Ry], R[Ry], pilha[R[Ry]] );
+					R[Rx]=wholeWord[R[Ry]];
+			//printf("Rx = 0x%08X\n", R[Rx]);
+				}
+				R[32]++;
 		}
 		else if(parse[4] == 70){ //F f0=IM16 F1=Rx F2=Ry
 				IM16=opIM16F(wholeWord[R[32]]);
