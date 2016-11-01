@@ -7,7 +7,6 @@
 #include <inttypes.h>
 #include <ctype.h>
 
-unsigned int* pilha = NULL;
 unsigned int** cache_dados;
 unsigned int** cache_instr;
 unsigned int int_pilha[3];
@@ -122,12 +121,9 @@ char* reg_name_UP(unsigned int registrador){
 }
 //todos registradores são zerados
 void cleanR(){
-	char i;
+	unsigned int i;
 	for(i=0; i<36; i++){
 		R[i]=0;
-	}
-	for(i=0; i<100; i++){
-		pilha[i]=0;
 	}
 }
 
@@ -148,8 +144,10 @@ void fpu(){
 			else
 				aux2=y;	
 			z=aux1+aux2;
-			zmem=z;
-			printf("\n\nAdicao %f+%f=%f\n\n",aux1,aux2,z);
+			memcpy(&zmem, &z, sizeof (zmem));
+			//printf("SOMA\n");
+			//printf("0x%08X 0x%08X %f\n\n",zmem, z, z);
+			//system("pause");
 			zisint=0;
 			controlFpu=0;
 			break;
@@ -163,83 +161,103 @@ void fpu(){
 			else
 				aux2=y;
 			z= aux1-aux2;
-			zmem=z;
-			printf("\n\nSubtracao %f-%f=%f\n\n",aux1,aux2,z);
+			memcpy(&zmem, &z, sizeof (zmem));
+			//printf("\n\nSubtracao %f-%f=%f\n\n",aux1,aux2,z);
+			//printf("0x%08X 0x%08X\n\n",zmem, z);
+			//system("pause");
 			zisint=0;
 			controlFpu=0;
 			break;
 		case 3:
 			if(xisfloat==1)
-			aux1=*((float*)&x);
+				aux1=*((float*)&x);
 			else
-			aux1=x;	
+				aux1=x;	
 			if(yisfloat==1)
-			aux2=*((float*)&y);
+				aux2=*((float*)&y);
 			else
 			aux2=y;
 			z= aux1*aux2;
-			zmem=z;
+			memcpy(&zmem, &z, sizeof (zmem));
 			zisint=0;
-			printf("\n\nMultiplicacao %f*%f=%f\n\n",aux1,aux2,z);
+			//printf("MULTIPLICACAO\n");
+			//printf("0x%08X 0x%08X\n\n",zmem, z);
+			//system("pause");
 			controlFpu=0;
 			break;
 		case 4:
 			if(xisfloat==1)
-			aux1=*((float*)&x);
+				aux1=*((float*)&x);
 			else
-			aux1=x;	
+				aux1=x;	
 			if(yisfloat==1)
-			aux2=*((float*)&y);
+				aux2=*((float*)&y);
 			else
-			aux2=y;
+				aux2=y;
 			if(y==0){
 				z=0;
 				controlFpu=0x00000020;
 			}
 			else{
 				z=aux1/aux2;
-				zmem=z;
+				memcpy(&zmem, &z, sizeof (zmem));
 				controlFpu=0;
 			}
-			printf("\n\nDivisao %f/%f=%f\n\n",aux1,aux2,z);
+			//printf("DIVISAO\n");
+			//printf("0x%08X 0x%08X\n\n",zmem, z);
+			//system("pause");
 			zisint=0;
 			break;
 		case 5:
-			memcpy(&x, &zmem, sizeof (x));
-			printf("\n\nAtribuicao x=0x%08X\n\n",x);
+			memcpy(&x, &z, sizeof (x));
+			//printf("ATTRIB X");
+			//printf("0x%08X 0x%08X\n\n",zmem, z);
+			//system("pause");
 			xisfloat=1;
 			controlFpu=0;
 			break;
 		case 6:
-			memcpy(&y, &zmem, sizeof (y));
-			printf("\n\nAtribuicao x=0x%08X\n\n",y);
+			memcpy(&y, &z, sizeof (y));
+			//printf("ATTRIB Y\n");
+			//printf("0x%08X 0x%08X\n\n",zmem, z);
+			//system("pause");
 			yisfloat=1;
 			controlFpu=0;
 			break;
 		case 7:
-			z=floorf(zmem);
-			printf("\n\nPiso %f\n\n",z);
+			//printf("%f",z);
+			zmem=z+1;
+			//printf("TETO\n");
+			//printf("0x%08X 0x%08X\n\n",zmem, z);
+			//system("pause");
 			controlFpu=0;
 			break;
 		case 8: 
-			z=ceilf(zmem);
-			printf("\n\nTeto %f\n\n",z);
+			//printf("%f",z);
+			zmem=floorf(z);
+			//printf("PISO\n");
+			//printf("0x%08X 0x%08X\n\n",zmem, z);
+			//system("pause");
 			controlFpu=0;
 			break;
 		case 9:
 			xint=z;
 			if((z-xint)>=0.5){
-				z=xint +1;
+				zmem=xint +1;
 			}
 			else{
-				z=xint;
+				zmem=xint;
 			}
-			printf("\n\nArredondamento %f\n\n",z);
+			//printf("%f",z);
+			//printf("ARREDONDAMENTO\n");
+			//printf("0x%08X 0x%08X\n\n",zmem, z);
+			//system("pause");
 			zisint=1;
 			controlFpu=0;
 			break;
 		default: 
-			printf("\n\nOperacao invalida\n\n");
+			//printf("0x%08X 0x%08X\n\n",zmem, z);
+			//system("pause");
 			controlFpu=0x00000020;
 			break;
 		}
@@ -478,17 +496,6 @@ void excU(unsigned int instruction, unsigned int Rz , unsigned int Rx, unsigned 
 			fprintf(saida, "xor %s, %s, %s\n",reg_name(Rz),reg_name(Rx),reg_name(Ry));
 			printf("[U] %s = %s ^ %s = 0x%08X\n", reg_name_UP(Rz),reg_name_UP(Rx),reg_name_UP(Ry),R[Rz] );
 			fprintf(saida,"[U] %s = %s ^ %s = 0x%08X\n", reg_name_UP(Rz),reg_name_UP(Rx),reg_name_UP(Ry),R[Rz] );
-		break;
-		//push
-		case 24:
-			Rx=Rx+((extensao&0x00000002)<<4);
-			Ry=Ry+((extensao&0x00000001)<<5);
-			
-		break;
-		//pop
-		case 25:
-			Rx=Rx+((extensao&0x00000002)<<4);
-			Ry=Ry+((extensao&0x00000001)<<5);
 		break;
 		}
 }
@@ -749,7 +756,7 @@ void RspU(unsigned int instruction, unsigned int Rz, unsigned int Rx, unsigned i
 	unsigned int aux3;
 	unsigned int aux4;
 	unsigned int aux5;
-	uint64_t mult, param1, param2;
+	uint64_t param1;
 	switch (instruction){
 		//add
 		case 0:
@@ -776,11 +783,14 @@ void RspU(unsigned int instruction, unsigned int Rz, unsigned int Rx, unsigned i
 			aux1=R[Rx];
 			aux2=R[Ry];
 			R[Rz]=R[Rx]-R[Ry];
-			if((aux1-aux2)<0xFFFFFFFF)
+			if((aux1&0x10000000)!=(R[Ry]&0x10000000))
 			{
-				if(R[35]<0x10)
-					R[35]=R[35]+0x00000010;
+				R[35]=R[35]|0x00000010;
 			}
+			else{
+				//system("pause");
+				R[35]=R[35]&0xFFFFFFEF;
+				}
 		break;
 		//mul
 		case 4:
@@ -788,12 +798,9 @@ void RspU(unsigned int instruction, unsigned int Rz, unsigned int Rx, unsigned i
 				Ry=Ry+((extensao&0x00000001)<<5);
 				Rz=Rz+((extensao&0x00000004)<<3);
 				//printf("Rz R%d Rx R%d Ry R%d\n", Rz, Rx, Ry);
-				//aux1=R[Rx];
-				//aux2=R[Ry];
 				param1 = ((uint64_t)R[Rx]) * ((uint64_t)R[Ry]);
 				R[Rz] = (uint32_t)(param1&0x00000000FFFFFFFF);
 				R[34] = (uint32_t)(param1>>32);
-				//printf("\nRz 0x%08X \n Rx 0x%08X Ry 0x%08X\n aux3 0x%08X\n",R[Rz],aux1, aux2, R[34]);
 				//system("pause");
 				if(R[34]!=0){
 					R[35]=R[35]|0x00000010;
@@ -895,22 +902,18 @@ void RspU(unsigned int instruction, unsigned int Rz, unsigned int Rx, unsigned i
 			Rz=Rz+((extensao&0x00000004)<<3);
 			R[Rz]=R[Rx]^R[Ry];
 		break;
-		//push
 		}
 }
 
 //modificacoes feitas por instrucoes tipo F
 void RspF(unsigned int instruction, unsigned int IM16, unsigned int Rx, unsigned int Ry){
 	unsigned int aux1, aux2;
-	unsigned int aux3, aux4, aux5;
-	uint64_t superaux;
-	uint64_t mult, param1, param2;
+	uint64_t param1;
 	switch (instruction){
 		//addi
 		case 1:
 			//printf("R[y] %d\n",R[Ry] );
 			aux1=R[Ry];
-			aux2=IM16;
 			R[Rx]=IM16+R[Ry];
 			//printf("Resp %X\n",R[Rx]);
 			//printf("%d+%d=%d\n", aux1, IM16,R[Rx]);
@@ -926,12 +929,11 @@ void RspF(unsigned int instruction, unsigned int IM16, unsigned int Rx, unsigned
 		//subi
 		case 3:
 			//
-			superaux=R[Ry]-IM16;
 			aux1=R[Ry];
 			R[Rx]=R[Ry]-IM16;
 			printf("R[Rx] %d R[Ry] %d IM16 0x%04X \n", R[Rx], aux1, IM16);
 			//system("pause");
-			if((aux1&0x10000000)!=(R[Ry]&0x10000000))
+			if((aux1&0x10000000)!=(R[Rx]&0x10000000))
 			{
 				R[35]=R[35]|0x00000010;
 			}
@@ -951,7 +953,6 @@ void RspF(unsigned int instruction, unsigned int IM16, unsigned int Rx, unsigned
 			else{
 				R[35]=R[35]&0xFFFFFFEF;
 			}
-			//printf("\nRz 0x%08X \n Rx 0x%08X Ry 0x%08X\n aux3 0x%08X\n",R[Rz],aux1, aux2, R[34]);
 			//system("pause");
 		break;
 		//divi (DUVIDA - SLIDE 5)
@@ -1334,7 +1335,6 @@ void dado_cache(unsigned int PC, unsigned int op, unsigned int* wholeWord, unsig
 	}
 }
 int main(int argc, char *argv[]){
-	pilha=(unsigned int*)malloc(1000*sizeof(sizeof(unsigned int)));
 	persistR0();
 	cleanR();
 	int_pilha[0]=0;
@@ -1397,9 +1397,9 @@ int main(int argc, char *argv[]){
 	char* parse;
 	unsigned int E, Rz,Rx,Ry,IM16;
 	unsigned int S;
-	unsigned int decounter, instruc, watchdog,aux, aux1 = 0,aux2, atual, counter;
+	unsigned int decounter, instruc, watchdog,aux, aux1 = 0,aux2, counter;
 	watchdog=0;
-	unsigned int trig, Sfpu, stb_fixer;
+	unsigned int trig;
 	float a, b;
 	counter=0;
 	i=0;
@@ -1420,7 +1420,6 @@ int main(int argc, char *argv[]){
 	while(1){
 		//instr_cache();
 		//printf("0x%08X\n", wholeWord[R[32]]);
-		atual=R[32];
 		parse=operacao(instruction[R[32]]);
 		R[33]=wholeWord[R[32]];
 		//printf ("here %08X\n", wholeWord[R[32]]);
@@ -1438,10 +1437,7 @@ int main(int argc, char *argv[]){
 				E=opEU(wholeWord[R[32]]);
 				//printf("passei \n");
 				//printf("Rz R%d Rx R%d Ry R%d\n", Rz, Rx, Ry);
-				RspU(instruction[R[32]], Rz, Rx, Ry,E);
 				//printf("Rz R%d Rx R%d Ry R%d\n",U[1], U[2], U[3]);
-				excU(instruction[R[32]], Rz ,Rx, Ry,E);
-				persistR0();
 				//R[35]=R[35]&0xFFFFFFDF;
 				//push
 				if(instruction[R[32]]==24){
@@ -1456,18 +1452,20 @@ int main(int argc, char *argv[]){
 				}
 				//pop
 				else if (instruction[R[32]]==25){
-					/* for(aux5=0;aux5<100;aux5++)
-					printf("Elemento %d %08x\n", aux5, pilha[aux5]);  */
 					Rx=Rx+((E&0x00000002)<<4);
 					Ry=Ry+((E&0x00000001)<<5);
 					printf("pop %s, %s\n",reg_name(Rx),reg_name(Ry));
 					fprintf(saida,"pop %s, %s\n",reg_name(Rx),reg_name(Ry));
+					R[Ry]=R[Ry]+1;
+					R[Rx]=wholeWord[R[Ry]];
 					printf("[U] %s = MEM[++%s] = 0x%08X\n", reg_name_UP(Rx),reg_name_UP(Ry),R[Rx]);
 					fprintf(saida, "[U] %s = MEM[++%s] = 0x%08X\n", reg_name_UP(Rx),reg_name_UP(Ry),R[Rx]);
-					R[Ry]=R[Ry]+1;
-					//printf("R%d = %d Pilha[%d] = %d\n", Ry, R[Ry], R[Ry], pilha[R[Ry]] );
-					R[Rx]=wholeWord[R[Ry]];
-			//printf("Rx = 0x%08X\n", R[Rx]);
+					printf("R1 = %d R2 = %d", R[1], R[2]);
+					}
+				else{
+					RspU(instruction[R[32]], Rz, Rx, Ry,E);
+					excU(instruction[R[32]], Rz ,Rx, Ry,E);
+					persistR0();
 				}
 				R[32]++;
 		}
@@ -1476,7 +1474,6 @@ int main(int argc, char *argv[]){
 				Rx=opxF(wholeWord[R[32]]);
 				Ry=opyF(wholeWord[R[32]]);
 				aux=Ry+0;
-				int something=24-(8*IM16);
 				RspF(instruction[R[32]], IM16, Rx, Ry);
 				//stw
 				if(instruction[R[32]]==22)
