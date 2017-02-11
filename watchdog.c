@@ -928,7 +928,7 @@ int main(){
 	unsigned long E, Rz,Rx,Ry,IM16;
 	unsigned long S;
 	unsigned long instruc;
-	unsigned long aux, b, aux1, divisao;
+	unsigned long aux, b, aux1, control;
 	i=0;
 	saida=fopen(path, "w");
 	printf("[START OF SIMULATION]\n");
@@ -1083,7 +1083,9 @@ int main(){
 		
 		if(R[32]==3){
 			printf("[SOFTWARE INTERRUPTION]\n");
-			fprintf(saida, "[SOFTWARE INTERRUPTION]\n");}
+			fprintf(saida, "[SOFTWARE INTERRUPTION]\n");
+			}
+		if()	
 	}
 	fclose(hexa);
 	return 0;
